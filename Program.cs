@@ -15,9 +15,11 @@ internal static class Program
         while (true)
         {
             Console.Clear();
+
             ShowWelcome();
 
-            TableSize tableSize = TableSetup.Create();
+            TableSize tableSize =
+                TableSetup.Create();
 
             if (tableSize.Cancelled)
             {
@@ -25,16 +27,20 @@ internal static class Program
                 return;
             }
 
-            Table table = new Table(
-                tableSize.DataRows,
-                tableSize.Columns);
+            Table table =
+                new Table(
+                    tableSize.DataRows,
+                    tableSize.Columns);
 
             TableEditor.Run(table);
 
             Console.Clear();
+
             Console.WriteLine("Table closed.");
             Console.WriteLine();
-            Console.Write("Create another table? (Y/N): ");
+
+            Console.Write(
+                "Create another table? (Y/N): ");
 
             ConsoleKey key =
                 Console.ReadKey(true).Key;
@@ -137,11 +143,6 @@ internal static class TableSetup
                 MaxRows,
                 selected == 1);
 
-            Console.WriteLine();
-
-            Console.WriteLine(
-                $"Table: {columns} columns × {rows} data rows");
-
             ConsoleKey key =
                 Console.ReadKey(true).Key;
 
@@ -222,7 +223,9 @@ internal static class TableSetup
         bool selected)
     {
         string marker =
-            selected ? ">" : " ";
+            selected
+                ? ">"
+                : " ";
 
         Console.WriteLine(
             $"{marker} {label,-10}[ {value,2} ]   ({minimum}-{maximum})");
@@ -456,16 +459,11 @@ internal static class CellEditor
 
         if (firstCharacter.HasValue)
         {
-            // Direct typing replaces the
-            // current value.
             buffer =
-                firstCharacter.Value
-                    .ToString();
+                firstCharacter.Value.ToString();
         }
         else
         {
-            // Enter starts editing the
-            // current value.
             buffer =
                 originalValue;
         }
@@ -620,8 +618,10 @@ internal static class CellEditor
             true);
 
         Console.SetCursorPosition(
-            CalculateInputCursorX(column),
-            CalculateInputCursorY(displayRow));
+            CalculateInputCursorX(
+                column),
+            CalculateInputCursorY(
+                displayRow));
 
         Console.CursorVisible = true;
     }
@@ -640,8 +640,15 @@ internal static class CellEditor
     private static int CalculateInputCursorY(
         int displayRow)
     {
+        // 0 = header top border
+        // 1 = header content
+        // 2 = header bottom border
+        // 3 = data top border
+        // 4 = first data row
         return
-            displayRow * 2 + 1;
+            displayRow == 0
+                ? 1
+                : displayRow * 2 + 2;
     }
 }
 
@@ -1231,6 +1238,12 @@ internal static class TableRenderer
 {
     private const int CellWidth = 15;
 
+    private const int BorderSegmentWidth =
+        CellWidth + 2;
+
+    private static readonly ConsoleColor HeaderBorderColor =
+        ConsoleColor.Cyan;
+
     public static void Render(
         Table table,
         int activeRow,
@@ -1251,24 +1264,70 @@ internal static class TableRenderer
         string? editingValue,
         bool editing)
     {
-        Console.SetCursorPosition(
-            0,
-            0);
+        Console.ResetColor();
+
+        // ========================================
+        // HEADER TOP
+        // ========================================
+
+        Console.ForegroundColor =
+            HeaderBorderColor;
 
         Console.WriteLine(
             BuildTopBorder(
                 table.ColumnCount));
 
-        RenderHeader(
+        Console.ResetColor();
+
+        // ========================================
+        // HEADER CONTENT
+        // ========================================
+
+        RenderHeaderRow(
             table,
             activeRow,
             activeColumn,
             editingValue,
             editing);
 
+        // ========================================
+        // HEADER BOTTOM
+        //
+        // This is a complete bottom border:
+        //
+        // └─────────────────┴─────────────────┘
+        //
+        // It is NOT shared with the data table.
+        // ========================================
+
+        Console.ForegroundColor =
+            HeaderBorderColor;
+
         Console.WriteLine(
-            BuildMiddleBorder(
+            BuildBottomBorder(
                 table.ColumnCount));
+
+        Console.ResetColor();
+
+        // ========================================
+        // DATA TOP
+        //
+        // This is a separate complete top border:
+        //
+        // ┌─────────────────┬─────────────────┐
+        //
+        // It is directly below the header border.
+        // ========================================
+
+        Console.ResetColor();
+
+        Console.WriteLine(
+            BuildTopBorder(
+                table.ColumnCount));
+
+        // ========================================
+        // DATA ROWS
+        // ========================================
 
         for (int dataRow = 0;
              dataRow < table.DataRowCount;
@@ -1277,56 +1336,47 @@ internal static class TableRenderer
             int displayRow =
                 dataRow + 1;
 
-            for (int column = 0;
-                 column < table.ColumnCount;
-                 column++)
-            {
-                ICell cell =
-                    table.GetDataCell(
-                        dataRow,
-                        column);
-
-                bool active =
-                    activeRow ==
-                        displayRow &&
-                    activeColumn ==
-                        column;
-
-                string value =
-                    active &&
-                    editing &&
-                    editingValue != null
-                        ? editingValue
-                        : cell.DisplayValue;
-
-                RenderDataCell(
-                    value,
-                    active);
-            }
-
-            Console.WriteLine();
+            RenderDataRow(
+                table,
+                dataRow,
+                displayRow,
+                activeRow,
+                activeColumn,
+                editingValue,
+                editing);
 
             if (dataRow <
                 table.DataRowCount - 1)
             {
-                Console.WriteLine(
-                    BuildMiddleBorder(
-                        table.ColumnCount));
+                RenderDataMiddleBorder(
+                    table.ColumnCount);
             }
         }
 
-        Console.WriteLine(
-            BuildBottomBorder(
-                table.ColumnCount));
+        // ========================================
+        // DATA BOTTOM
+        // ========================================
+
+        RenderDataBottomBorder(
+            table.ColumnCount);
+
+        Console.ResetColor();
     }
 
-    private static void RenderHeader(
+    // ============================================
+    // HEADER RENDERING
+    // ============================================
+
+    private static void RenderHeaderRow(
         Table table,
         int activeRow,
         int activeColumn,
         string? editingValue,
         bool editing)
     {
+        // Left edge.
+        WriteHeaderBorder("│");
+
         for (int column = 0;
              column < table.ColumnCount;
              column++)
@@ -1336,7 +1386,8 @@ internal static class TableRenderer
                 activeColumn == column;
 
             string header =
-                table.GetHeader(column);
+                table.GetHeader(
+                    column);
 
             bool hasHeader =
                 !string.IsNullOrEmpty(
@@ -1361,36 +1412,56 @@ internal static class TableRenderer
                     $"Header {column + 1}";
             }
 
-            RenderHeaderCell(
+            RenderHeaderCellContent(
                 header,
                 active,
                 !hasHeader &&
                 !(active && editing));
+
+            // Separator between header cells.
+            if (column <
+                table.ColumnCount - 1)
+            {
+                WriteHeaderBorder("│");
+            }
         }
 
-        Console.WriteLine("│");
+        // Right edge.
+        WriteHeaderBorder("│");
+
+        Console.WriteLine();
+
+        Console.ResetColor();
     }
 
-    private static void RenderHeaderCell(
+    private static void RenderHeaderCellContent(
         string value,
         bool active,
         bool placeholder)
     {
+        string marker =
+            active
+                ? "> "
+                : string.Empty;
+
+        int availableWidth =
+            CellWidth -
+            marker.Length;
+
         string content =
             Fit(
                 value,
+                availableWidth);
+
+        string text =
+            marker +
+            content;
+
+        text =
+            text.PadRight(
                 CellWidth);
 
-        if (active)
-        {
-            content =
-                "> " + content;
-
-            content =
-                Fit(
-                    content,
-                    CellWidth);
-        }
+        Console.Write(" ");
 
         if (placeholder &&
             !active)
@@ -1398,51 +1469,146 @@ internal static class TableRenderer
             Console.ForegroundColor =
                 ConsoleColor.DarkGray;
         }
+        else
+        {
+            Console.ForegroundColor =
+                ConsoleColor.White;
+        }
 
         Console.Write(
-            $"│ {content.PadRight(CellWidth)} ");
+            text);
+
+        Console.ResetColor();
+
+        Console.Write(" ");
+    }
+
+    // ============================================
+    // DATA RENDERING
+    // ============================================
+
+    private static void RenderDataRow(
+        Table table,
+        int dataRow,
+        int displayRow,
+        int activeRow,
+        int activeColumn,
+        string? editingValue,
+        bool editing)
+    {
+        Console.ResetColor();
+
+        // Left edge.
+        Console.Write("│");
+
+        for (int column = 0;
+             column < table.ColumnCount;
+             column++)
+        {
+            ICell cell =
+                table.GetDataCell(
+                    dataRow,
+                    column);
+
+            bool active =
+                activeRow == displayRow &&
+                activeColumn == column;
+
+            string value =
+                active &&
+                editing &&
+                editingValue != null
+                    ? editingValue
+                    : cell.DisplayValue;
+
+            RenderDataCellContent(
+                value,
+                active);
+
+            // Separator between data cells.
+            if (column <
+                table.ColumnCount - 1)
+            {
+                Console.Write("│");
+            }
+        }
+
+        // Right edge.
+        Console.WriteLine("│");
 
         Console.ResetColor();
     }
 
-    private static void RenderDataCell(
+    private static void RenderDataCellContent(
         string value,
         bool active)
     {
+        string marker =
+            active
+                ? "> "
+                : string.Empty;
+
+        int availableWidth =
+            CellWidth -
+            marker.Length;
+
         string content =
             Fit(
                 value,
+                availableWidth);
+
+        string text =
+            marker +
+            content;
+
+        text =
+            text.PadRight(
                 CellWidth);
 
-        if (active)
-        {
-            content =
-                "> " + content;
-
-            content =
-                Fit(
-                    content,
-                    CellWidth);
-        }
-
         Console.Write(
-            $"│ {content.PadRight(CellWidth)} ");
+            " " +
+            text +
+            " ");
+    }
+
+    // ============================================
+    // BORDERS
+    // ============================================
+
+    private static void RenderDataMiddleBorder(
+        int columnCount)
+    {
+        Console.ResetColor();
+
+        Console.WriteLine(
+            BuildMiddleBorder(
+                columnCount));
+    }
+
+    private static void RenderDataBottomBorder(
+        int columnCount)
+    {
+        Console.ResetColor();
+
+        Console.WriteLine(
+            BuildBottomBorder(
+                columnCount));
     }
 
     private static string BuildTopBorder(
         int columnCount)
     {
-        string cellBorder =
+        string segment =
             new string(
                 '─',
-                CellWidth + 2);
+                BorderSegmentWidth);
 
         return
             "┌" +
             string.Join(
                 "┬",
                 Enumerable.Repeat(
-                    cellBorder,
+                    segment,
                     columnCount)) +
             "┐";
     }
@@ -1450,17 +1616,17 @@ internal static class TableRenderer
     private static string BuildMiddleBorder(
         int columnCount)
     {
-        string cellBorder =
+        string segment =
             new string(
                 '─',
-                CellWidth + 2);
+                BorderSegmentWidth);
 
         return
             "├" +
             string.Join(
                 "┼",
                 Enumerable.Repeat(
-                    cellBorder,
+                    segment,
                     columnCount)) +
             "┤";
     }
@@ -1468,19 +1634,31 @@ internal static class TableRenderer
     private static string BuildBottomBorder(
         int columnCount)
     {
-        string cellBorder =
+        string segment =
             new string(
                 '─',
-                CellWidth + 2);
+                BorderSegmentWidth);
 
         return
             "└" +
             string.Join(
                 "┴",
                 Enumerable.Repeat(
-                    cellBorder,
+                    segment,
                     columnCount)) +
             "┘";
+    }
+
+    private static void WriteHeaderBorder(
+        string value)
+    {
+        Console.ForegroundColor =
+            HeaderBorderColor;
+
+        Console.Write(
+            value);
+
+        Console.ResetColor();
     }
 
     private static string Fit(
