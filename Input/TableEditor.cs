@@ -1,4 +1,5 @@
 using ExcelClone.Models;
+using ExcelClone.Operations;
 using ExcelClone.Rendering;
 
 namespace ExcelClone.Input;
@@ -18,6 +19,9 @@ internal static class TableEditor
 
         int activeOperation = 0;
 
+        string? operationResult =
+            null;
+
         FocusArea focus =
             FocusArea.Table;
 
@@ -26,7 +30,8 @@ internal static class TableEditor
             activeRow,
             activeColumn,
             focus,
-            activeOperation);
+            activeOperation,
+            operationResult);
 
         while (true)
         {
@@ -40,6 +45,8 @@ internal static class TableEditor
                 // ========================================
 
                 case ConsoleKey.UpArrow:
+
+                    operationResult = null;
 
                     if (focus ==
                         FocusArea.Table)
@@ -57,10 +64,6 @@ internal static class TableEditor
                         }
                         else
                         {
-                            /*
-                             * Leave the operation block
-                             * and return to the last data row.
-                             */
                             focus =
                                 FocusArea.Table;
 
@@ -74,7 +77,8 @@ internal static class TableEditor
                         activeRow,
                         activeColumn,
                         focus,
-                        activeOperation);
+                        activeOperation,
+                        operationResult);
 
                     break;
 
@@ -83,6 +87,8 @@ internal static class TableEditor
                 // ========================================
 
                 case ConsoleKey.DownArrow:
+
+                    operationResult = null;
 
                     if (focus ==
                         FocusArea.Table)
@@ -96,11 +102,6 @@ internal static class TableEditor
                             table,
                             activeColumn))
                         {
-                            /*
-                             * Enter the operation block
-                             * only when this column has
-                             * a detected type.
-                             */
                             focus =
                                 FocusArea.Operations;
 
@@ -126,7 +127,8 @@ internal static class TableEditor
                         activeRow,
                         activeColumn,
                         focus,
-                        activeOperation);
+                        activeOperation,
+                        operationResult);
 
                     break;
 
@@ -136,13 +138,11 @@ internal static class TableEditor
 
                 case ConsoleKey.LeftArrow:
 
+                    operationResult = null;
+
                     if (focus ==
                         FocusArea.Table)
                     {
-                        /*
-                         * Normal horizontal movement
-                         * inside the main table.
-                         */
                         activeColumn =
                             Math.Max(
                                 activeColumn - 1,
@@ -155,13 +155,6 @@ internal static class TableEditor
                     }
                     else
                     {
-                        /*
-                         * Inside the operation block,
-                         * skip columns that have no
-                         * detected type.
-                         *
-                         * Do not jump back into the table.
-                         */
                         int targetColumn =
                             FindPreviousOperationColumn(
                                 table,
@@ -185,7 +178,8 @@ internal static class TableEditor
                         activeRow,
                         activeColumn,
                         focus,
-                        activeOperation);
+                        activeOperation,
+                        operationResult);
 
                     break;
 
@@ -195,13 +189,11 @@ internal static class TableEditor
 
                 case ConsoleKey.RightArrow:
 
+                    operationResult = null;
+
                     if (focus ==
                         FocusArea.Table)
                     {
-                        /*
-                         * Normal horizontal movement
-                         * inside the main table.
-                         */
                         activeColumn =
                             Math.Min(
                                 activeColumn + 1,
@@ -214,13 +206,6 @@ internal static class TableEditor
                     }
                     else
                     {
-                        /*
-                         * Inside the operation block,
-                         * skip columns that have no
-                         * detected type.
-                         *
-                         * Do not jump back into the table.
-                         */
                         int targetColumn =
                             FindNextOperationColumn(
                                 table,
@@ -244,7 +229,8 @@ internal static class TableEditor
                         activeRow,
                         activeColumn,
                         focus,
-                        activeOperation);
+                        activeOperation,
+                        operationResult);
 
                     break;
 
@@ -257,6 +243,8 @@ internal static class TableEditor
                     if (focus ==
                         FocusArea.Table)
                     {
+                        operationResult = null;
+
                         EditResult result =
                             CellEditor.Edit(
                                 table,
@@ -280,14 +268,36 @@ internal static class TableEditor
                             activeRow,
                             activeColumn,
                             focus,
-                            activeOperation);
+                            activeOperation,
+                            operationResult);
                     }
                     else
                     {
                         /*
-                         * Operation execution will be
-                         * implemented later.
+                         * Execute the currently selected
+                         * operation.
                          */
+                        if (OperationExecutor.TryExecute(
+                                table,
+                                activeColumn,
+                                activeOperation,
+                                out string result))
+                        {
+                            operationResult =
+                                result;
+                        }
+                        else
+                        {
+                            operationResult = null;
+                        }
+
+                        RenderTable(
+                            table,
+                            activeRow,
+                            activeColumn,
+                            focus,
+                            activeOperation,
+                            operationResult);
                     }
 
                     break;
@@ -298,16 +308,11 @@ internal static class TableEditor
 
                 case ConsoleKey.Backspace:
 
+                    operationResult = null;
+
                     if (focus ==
                         FocusArea.Table)
                     {
-                        /*
-                         * Start editing immediately and
-                         * remove the last character.
-                         *
-                         * This applies to both the
-                         * header row and data cells.
-                         */
                         EditResult result =
                             CellEditor.Edit(
                                 table,
@@ -332,7 +337,8 @@ internal static class TableEditor
                             activeRow,
                             activeColumn,
                             focus,
-                            activeOperation);
+                            activeOperation,
+                            operationResult);
                     }
 
                     break;
@@ -356,10 +362,8 @@ internal static class TableEditor
                         !char.IsControl(
                             key.KeyChar))
                     {
-                        /*
-                         * Start editing immediately
-                         * when the user types.
-                         */
+                        operationResult = null;
+
                         EditResult result =
                             CellEditor.Edit(
                                 table,
@@ -383,7 +387,8 @@ internal static class TableEditor
                             activeRow,
                             activeColumn,
                             focus,
-                            activeOperation);
+                            activeOperation,
+                            operationResult);
                     }
 
                     break;
@@ -567,7 +572,8 @@ internal static class TableEditor
         int activeRow,
         int activeColumn,
         FocusArea focus,
-        int activeOperation)
+        int activeOperation,
+        string? operationResult)
     {
         Console.CursorVisible = false;
 
@@ -582,6 +588,7 @@ internal static class TableEditor
             null,
             false,
             focus == FocusArea.Operations,
-            activeOperation);
+            activeOperation,
+            operationResult);
     }
 }

@@ -15,6 +15,10 @@ internal static class TableRenderer
     private static readonly ConsoleColor HeaderBorderColor =
         ConsoleColor.Cyan;
 
+    // ============================================
+    // BACKWARD-COMPATIBLE RENDER OVERLOADS
+    // ============================================
+
     public static void Render(
         Table table,
         int activeRow,
@@ -27,7 +31,26 @@ internal static class TableRenderer
             null,
             false,
             false,
-            0);
+            0,
+            null);
+    }
+
+    public static void Render(
+        Table table,
+        int activeRow,
+        int activeColumn,
+        string? editingValue,
+        bool editing)
+    {
+        Render(
+            table,
+            activeRow,
+            activeColumn,
+            editingValue,
+            editing,
+            false,
+            0,
+            null);
     }
 
     public static void Render(
@@ -38,6 +61,31 @@ internal static class TableRenderer
         bool editing,
         bool operationFocus,
         int activeOperation)
+    {
+        Render(
+            table,
+            activeRow,
+            activeColumn,
+            editingValue,
+            editing,
+            operationFocus,
+            activeOperation,
+            null);
+    }
+
+    // ============================================
+    // MAIN RENDER
+    // ============================================
+
+    public static void Render(
+        Table table,
+        int activeRow,
+        int activeColumn,
+        string? editingValue,
+        bool editing,
+        bool operationFocus,
+        int activeOperation,
+        string? operationResult)
     {
         Console.ResetColor();
 
@@ -134,7 +182,8 @@ internal static class TableRenderer
             operationFocus
                 ? activeColumn
                 : -1,
-            activeOperation);
+            activeOperation,
+            operationResult);
 
         Console.ResetColor();
     }

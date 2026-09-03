@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using ExcelClone.Models;
@@ -16,17 +17,13 @@ internal static class OperationRenderer
     public static void Render(
         Table table,
         int activeColumn,
-        int activeOperation)
+        int activeOperation,
+        string? operationResult = null)
     {
         Console.ResetColor();
 
         // ========================================
         // OPERATION TOP
-        //
-        // This is deliberately a complete,
-        // separate top border.
-        //
-        // ┌─────────────────┬─────────────────┐
         // ========================================
 
         Console.WriteLine(
@@ -45,7 +42,8 @@ internal static class OperationRenderer
                 table,
                 activeColumn,
                 activeOperation,
-                operationRow);
+                operationRow,
+                operationResult);
         }
 
         // ========================================
@@ -63,7 +61,8 @@ internal static class OperationRenderer
         Table table,
         int activeColumn,
         int activeOperation,
-        int operationRow)
+        int operationRow,
+        string? operationResult)
     {
         Console.Write("│");
 
@@ -91,8 +90,23 @@ internal static class OperationRenderer
                 !string.IsNullOrEmpty(
                     operation);
 
+            /*
+             * Show the execution result in the
+             * selected Sum cell.
+             */
+            string displayValue =
+                operation;
+
+            if (selected &&
+                operationRow == 2 &&
+                operationResult != null)
+            {
+                displayValue =
+                    $"Sum: {operationResult}";
+            }
+
             RenderOperationCell(
-                operation,
+                displayValue,
                 selected);
 
             if (column <
@@ -152,9 +166,6 @@ internal static class OperationRenderer
     {
         // ========================================
         // NUMERIC
-        //
-        // Int and Double share the same
-        // operation set.
         // ========================================
 
         if (profile.IsNumeric)
@@ -168,7 +179,7 @@ internal static class OperationRenderer
         }
 
         // ========================================
-        // OTHER TYPES
+        // DATE
         // ========================================
 
         switch (profile.DominantType)
@@ -181,6 +192,10 @@ internal static class OperationRenderer
                     "New → Old"
                 ];
 
+            // ====================================
+            // BOOLEAN
+            // ====================================
+
             case DetectedType.Bool:
 
                 return
@@ -189,6 +204,10 @@ internal static class OperationRenderer
                     "False first"
                 ];
 
+            // ====================================
+            // STRING
+            // ====================================
+
             case DetectedType.String:
 
                 return
@@ -196,6 +215,10 @@ internal static class OperationRenderer
                     "A → Z",
                     "Z → A"
                 ];
+
+            // ====================================
+            // EMPTY
+            // ====================================
 
             case DetectedType.Empty:
 
