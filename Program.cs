@@ -15,11 +15,9 @@ internal static class Program
         while (true)
         {
             Console.Clear();
-
             ShowWelcome();
 
-            TableSize tableSize =
-                TableSetup.Create();
+            TableSize tableSize = TableSetup.Create();
 
             if (tableSize.Cancelled)
             {
@@ -27,20 +25,16 @@ internal static class Program
                 return;
             }
 
-            Table table =
-                new Table(
-                    tableSize.DataRows,
-                    tableSize.Columns);
+            Table table = new Table(
+                tableSize.DataRows,
+                tableSize.Columns);
 
             TableEditor.Run(table);
 
             Console.Clear();
-
             Console.WriteLine("Table closed.");
             Console.WriteLine();
-
-            Console.Write(
-                "Create another table? (Y/N): ");
+            Console.Write("Create another table? (Y/N): ");
 
             ConsoleKey key =
                 Console.ReadKey(true).Key;
@@ -242,9 +236,7 @@ internal static class TableEditor
         int activeRow = 0;
         int activeColumn = 0;
 
-        Console.Clear();
-
-        TableRenderer.Render(
+        RenderTable(
             table,
             activeRow,
             activeColumn);
@@ -258,61 +250,79 @@ internal static class TableEditor
             {
                 case ConsoleKey.UpArrow:
 
-                    Move(
+                    activeRow =
+                        Math.Max(
+                            activeRow - 1,
+                            0);
+
+                    RenderTable(
                         table,
-                        ref activeRow,
-                        ref activeColumn,
-                        activeRow - 1,
+                        activeRow,
                         activeColumn);
 
                     break;
 
                 case ConsoleKey.DownArrow:
 
-                    Move(
+                    activeRow =
+                        Math.Min(
+                            activeRow + 1,
+                            table.TotalDisplayRows - 1);
+
+                    RenderTable(
                         table,
-                        ref activeRow,
-                        ref activeColumn,
-                        activeRow + 1,
+                        activeRow,
                         activeColumn);
 
                     break;
 
                 case ConsoleKey.LeftArrow:
 
-                    Move(
+                    activeColumn =
+                        Math.Max(
+                            activeColumn - 1,
+                            0);
+
+                    RenderTable(
                         table,
-                        ref activeRow,
-                        ref activeColumn,
                         activeRow,
-                        activeColumn - 1);
+                        activeColumn);
 
                     break;
 
                 case ConsoleKey.RightArrow:
 
-                    Move(
+                    activeColumn =
+                        Math.Min(
+                            activeColumn + 1,
+                            table.ColumnCount - 1);
+
+                    RenderTable(
                         table,
-                        ref activeRow,
-                        ref activeColumn,
                         activeRow,
-                        activeColumn + 1);
+                        activeColumn);
 
                     break;
 
                 case ConsoleKey.Enter:
 
-                    CellEditor.Edit(
-                        table,
-                        activeRow,
-                        activeColumn,
-                        null);
+                    EditResult enterResult =
+                        CellEditor.Edit(
+                            table,
+                            activeRow,
+                            activeColumn,
+                            null);
 
-                    TableRenderer.RenderCellAt(
+                    MoveAfterEditing(
+                        table,
+                        ref activeRow,
+                        ref activeColumn,
+                        enterResult);
+
+                    RenderTable(
                         table,
                         activeRow,
-                        activeColumn,
-                        true);
+                        activeColumn);
 
                     break;
 
@@ -325,17 +335,23 @@ internal static class TableEditor
                     if (!char.IsControl(
                             key.KeyChar))
                     {
-                        CellEditor.Edit(
-                            table,
-                            activeRow,
-                            activeColumn,
-                            key.KeyChar);
+                        EditResult typingResult =
+                            CellEditor.Edit(
+                                table,
+                                activeRow,
+                                activeColumn,
+                                key.KeyChar);
 
-                        TableRenderer.RenderCellAt(
+                        MoveAfterEditing(
+                            table,
+                            ref activeRow,
+                            ref activeColumn,
+                            typingResult);
+
+                        RenderTable(
                             table,
                             activeRow,
-                            activeColumn,
-                            true);
+                            activeColumn);
                     }
 
                     break;
@@ -343,54 +359,82 @@ internal static class TableEditor
         }
     }
 
-    private static void Move(
+    private static void MoveAfterEditing(
         Table table,
         ref int activeRow,
         ref int activeColumn,
-        int newRow,
-        int newColumn)
+        EditResult result)
     {
-        newRow =
-            Math.Clamp(
-                newRow,
-                0,
-                table.TotalDisplayRows - 1);
-
-        newColumn =
-            Math.Clamp(
-                newColumn,
-                0,
-                table.ColumnCount - 1);
-
-        if (newRow == activeRow &&
-            newColumn == activeColumn)
+        switch (result)
         {
-            return;
+            case EditResult.MoveUp:
+
+                activeRow =
+                    Math.Max(
+                        activeRow - 1,
+                        0);
+
+                break;
+
+            case EditResult.MoveDown:
+
+                activeRow =
+                    Math.Min(
+                        activeRow + 1,
+                        table.TotalDisplayRows - 1);
+
+                break;
+
+            case EditResult.MoveLeft:
+
+                activeColumn =
+                    Math.Max(
+                        activeColumn - 1,
+                        0);
+
+                break;
+
+            case EditResult.MoveRight:
+
+                activeColumn =
+                    Math.Min(
+                        activeColumn + 1,
+                        table.ColumnCount - 1);
+
+                break;
         }
+    }
 
-        int oldRow = activeRow;
-        int oldColumn = activeColumn;
+    private static void RenderTable(
+        Table table,
+        int activeRow,
+        int activeColumn)
+    {
+        Console.CursorVisible = false;
 
-        activeRow = newRow;
-        activeColumn = newColumn;
+        Console.SetCursorPosition(
+            0,
+            0);
 
-        TableRenderer.RenderCellAt(
-            table,
-            oldRow,
-            oldColumn,
-            false);
-
-        TableRenderer.RenderCellAt(
+        TableRenderer.Render(
             table,
             activeRow,
-            activeColumn,
-            true);
+            activeColumn);
     }
+}
+
+internal enum EditResult
+{
+    Stay,
+    MoveUp,
+    MoveDown,
+    MoveLeft,
+    MoveRight
 }
 
 internal static class CellEditor
 {
-    public static void Edit(
+    public static EditResult Edit(
         Table table,
         int displayRow,
         int column,
@@ -399,44 +443,38 @@ internal static class CellEditor
         bool isHeader =
             displayRow == 0;
 
-        string originalValue;
-
-        if (isHeader)
-        {
-            originalValue =
-                table.GetHeader(column);
-        }
-        else
-        {
-            originalValue =
-                table
+        string originalValue =
+            isHeader
+                ? table.GetHeader(column)
+                : table
                     .GetDataCell(
                         displayRow - 1,
                         column)
                     .DisplayValue;
-        }
 
         string buffer;
 
         if (firstCharacter.HasValue)
         {
+            // Direct typing replaces the
+            // current value.
             buffer =
                 firstCharacter.Value
                     .ToString();
         }
         else
         {
+            // Enter starts editing the
+            // current value.
             buffer =
                 originalValue;
         }
 
-        TableRenderer.RenderCellAt(
+        RenderEditingState(
             table,
             displayRow,
             column,
-            true,
-            buffer,
-            true);
+            buffer);
 
         while (true)
         {
@@ -453,11 +491,51 @@ internal static class CellEditor
                         column,
                         buffer);
 
-                    return;
+                    return EditResult.Stay;
 
                 case ConsoleKey.Escape:
 
-                    return;
+                    return EditResult.Stay;
+
+                case ConsoleKey.UpArrow:
+
+                    Commit(
+                        table,
+                        displayRow,
+                        column,
+                        buffer);
+
+                    return EditResult.MoveUp;
+
+                case ConsoleKey.DownArrow:
+
+                    Commit(
+                        table,
+                        displayRow,
+                        column,
+                        buffer);
+
+                    return EditResult.MoveDown;
+
+                case ConsoleKey.LeftArrow:
+
+                    Commit(
+                        table,
+                        displayRow,
+                        column,
+                        buffer);
+
+                    return EditResult.MoveLeft;
+
+                case ConsoleKey.RightArrow:
+
+                    Commit(
+                        table,
+                        displayRow,
+                        column,
+                        buffer);
+
+                    return EditResult.MoveRight;
 
                 case ConsoleKey.Backspace:
 
@@ -466,13 +544,11 @@ internal static class CellEditor
                         buffer =
                             buffer[..^1];
 
-                        TableRenderer.RenderCellAt(
+                        RenderEditingState(
                             table,
                             displayRow,
                             column,
-                            true,
-                            buffer,
-                            true);
+                            buffer);
                     }
 
                     break;
@@ -485,13 +561,11 @@ internal static class CellEditor
                         buffer +=
                             key.KeyChar;
 
-                        TableRenderer.RenderCellAt(
+                        RenderEditingState(
                             table,
                             displayRow,
                             column,
-                            true,
-                            buffer,
-                            true);
+                            buffer);
                     }
 
                     break;
@@ -505,6 +579,8 @@ internal static class CellEditor
         int column,
         string buffer)
     {
+        Console.CursorVisible = false;
+
         if (displayRow == 0)
         {
             table.SetHeader(
@@ -515,19 +591,63 @@ internal static class CellEditor
         }
 
         ICell cell =
-            CellFactory.Create(buffer);
+            CellFactory.Create(
+                buffer);
 
         table.SetDataCell(
             displayRow - 1,
             column,
             cell);
     }
+
+    private static void RenderEditingState(
+        Table table,
+        int displayRow,
+        int column,
+        string buffer)
+    {
+        Console.Clear();
+
+        Console.SetCursorPosition(
+            0,
+            0);
+
+        TableRenderer.Render(
+            table,
+            displayRow,
+            column,
+            buffer,
+            true);
+
+        Console.SetCursorPosition(
+            CalculateInputCursorX(column),
+            CalculateInputCursorY(displayRow));
+
+        Console.CursorVisible = true;
+    }
+
+    private static int CalculateInputCursorX(
+        int column)
+    {
+        const int cellWidth = 15;
+
+        return
+            column *
+            (cellWidth + 3) +
+            3;
+    }
+
+    private static int CalculateInputCursorY(
+        int displayRow)
+    {
+        return
+            displayRow * 2 + 1;
+    }
 }
 
 internal sealed class Table
 {
     private readonly List<Row> rows;
-
     private readonly List<string> headers;
 
     public int DataRowCount { get; }
@@ -588,7 +708,8 @@ internal sealed class Table
              row++)
         {
             rows.Add(
-                new Row(columnCount));
+                new Row(
+                    columnCount));
         }
     }
 
@@ -681,7 +802,8 @@ internal sealed class Row
 {
     private readonly List<ICell> cells;
 
-    public Row(int columnCount)
+    public Row(
+        int columnCount)
     {
         cells =
             new List<ICell>(
@@ -759,7 +881,8 @@ internal sealed class Cell<T> : ICell
         Value;
 
     public string DisplayValue =>
-        ValueFormatter.Format(Value);
+        ValueFormatter.Format(
+            Value);
 
     public bool IsEmpty =>
         Value is string text &&
@@ -770,9 +893,11 @@ internal sealed class Cell<T> : ICell
         Value is double ||
         Value is decimal;
 
-    public Cell(T value)
+    public Cell(
+        T value)
     {
-        Value = value;
+        Value =
+            value;
     }
 
     public bool TryGetDecimal(
@@ -780,7 +905,9 @@ internal sealed class Cell<T> : ICell
     {
         if (Value is int intValue)
         {
-            value = intValue;
+            value =
+                intValue;
+
             return true;
         }
 
@@ -801,6 +928,7 @@ internal sealed class Cell<T> : ICell
         }
 
         value = 0;
+
         return false;
     }
 }
@@ -976,7 +1104,8 @@ internal sealed class TypeProfile
                 DominantType =
                     DetectedType.Empty,
 
-                NonEmptyCount = 0
+                NonEmptyCount =
+                    0
             };
         }
 
@@ -1052,27 +1181,29 @@ internal sealed class TypeProfile
             int dates)
     {
         Dictionary<DetectedType, int>
-            counts = new()
-            {
-                [DetectedType.String] =
-                    strings,
+            counts =
+                new()
+                {
+                    [DetectedType.String] =
+                        strings,
 
-                [DetectedType.Int] =
-                    ints,
+                    [DetectedType.Int] =
+                        ints,
 
-                [DetectedType.Double] =
-                    doubles,
+                    [DetectedType.Double] =
+                        doubles,
 
-                [DetectedType.Bool] =
-                    bools,
+                    [DetectedType.Bool] =
+                        bools,
 
-                [DetectedType.DateTime] =
-                    dates
-            };
+                    [DetectedType.DateTime] =
+                        dates
+                };
 
         return counts
             .OrderByDescending(
-                pair => pair.Value)
+                pair =>
+                    pair.Value)
             .ThenBy(
                 pair =>
                     TypePriority(
@@ -1105,7 +1236,24 @@ internal static class TableRenderer
         int activeRow,
         int activeColumn)
     {
-        Console.WriteLine();
+        Render(
+            table,
+            activeRow,
+            activeColumn,
+            null,
+            false);
+    }
+
+    public static void Render(
+        Table table,
+        int activeRow,
+        int activeColumn,
+        string? editingValue,
+        bool editing)
+    {
+        Console.SetCursorPosition(
+            0,
+            0);
 
         Console.WriteLine(
             BuildTopBorder(
@@ -1114,7 +1262,9 @@ internal static class TableRenderer
         RenderHeader(
             table,
             activeRow,
-            activeColumn);
+            activeColumn,
+            editingValue,
+            editing);
 
         Console.WriteLine(
             BuildMiddleBorder(
@@ -1137,11 +1287,20 @@ internal static class TableRenderer
                         column);
 
                 bool active =
-                    activeRow == displayRow &&
-                    activeColumn == column;
+                    activeRow ==
+                        displayRow &&
+                    activeColumn ==
+                        column;
 
-                RenderCell(
-                    cell.DisplayValue,
+                string value =
+                    active &&
+                    editing &&
+                    editingValue != null
+                        ? editingValue
+                        : cell.DisplayValue;
+
+                RenderDataCell(
+                    value,
                     active);
             }
 
@@ -1159,61 +1318,64 @@ internal static class TableRenderer
         Console.WriteLine(
             BuildBottomBorder(
                 table.ColumnCount));
-
-        Console.WriteLine();
-
-        Console.WriteLine(
-            "↑ ↓ ← → Navigate   Type to enter   Enter Edit   Esc Close");
     }
 
-    public static void RenderCellAt(
+    private static void RenderHeader(
         Table table,
-        int displayRow,
-        int column,
-        bool active,
-        string? temporaryValue = null,
-        bool editing = false)
+        int activeRow,
+        int activeColumn,
+        string? editingValue,
+        bool editing)
     {
-        int x =
-            column * (CellWidth + 3) + 1;
-
-        int y =
-            displayRow == 0
-                ? 1
-                : displayRow * 2 + 1;
-
-        Console.SetCursorPosition(
-            x,
-            y);
-
-        string value;
-
-        if (temporaryValue != null)
+        for (int column = 0;
+             column < table.ColumnCount;
+             column++)
         {
-            value =
-                temporaryValue;
-        }
-        else if (displayRow == 0)
-        {
-            value =
+            bool active =
+                activeRow == 0 &&
+                activeColumn == column;
+
+            string header =
                 table.GetHeader(column);
 
-            if (string.IsNullOrEmpty(value))
+            bool hasHeader =
+                !string.IsNullOrEmpty(
+                    header);
+
+            if (active &&
+                editing &&
+                editingValue != null)
             {
-                value =
+                header =
+                    editingValue;
+
+                hasHeader =
+                    !string.IsNullOrEmpty(
+                        header);
+            }
+
+            if (!hasHeader &&
+                !(active && editing))
+            {
+                header =
                     $"Header {column + 1}";
             }
-        }
-        else
-        {
-            value =
-                table
-                    .GetDataCell(
-                        displayRow - 1,
-                        column)
-                    .DisplayValue;
+
+            RenderHeaderCell(
+                header,
+                active,
+                !hasHeader &&
+                !(active && editing));
         }
 
+        Console.WriteLine("│");
+    }
+
+    private static void RenderHeaderCell(
+        string value,
+        bool active,
+        bool placeholder)
+    {
         string content =
             Fit(
                 value,
@@ -1229,75 +1391,42 @@ internal static class TableRenderer
                     content,
                     CellWidth);
         }
-        else if (displayRow == 0 &&
-                 value.StartsWith(
-                     "Header ",
-                     StringComparison.Ordinal))
+
+        if (placeholder &&
+            !active)
         {
             Console.ForegroundColor =
                 ConsoleColor.DarkGray;
         }
 
         Console.Write(
-            content.PadRight(
-                CellWidth));
+            $"│ {content.PadRight(CellWidth)} ");
 
         Console.ResetColor();
     }
 
-    private static void RenderHeader(
-        Table table,
-        int activeRow,
-        int activeColumn)
+    private static void RenderDataCell(
+        string value,
+        bool active)
     {
-        for (int column = 0;
-             column < table.ColumnCount;
-             column++)
+        string content =
+            Fit(
+                value,
+                CellWidth);
+
+        if (active)
         {
-            bool active =
-                activeRow == 0 &&
-                activeColumn == column;
+            content =
+                "> " + content;
 
-            string header =
-                table.GetHeader(column);
-
-            if (string.IsNullOrEmpty(header))
-            {
-                header =
-                    $"Header {column + 1}";
-            }
-
-            string content =
+            content =
                 Fit(
-                    header,
+                    content,
                     CellWidth);
-
-            if (active)
-            {
-                content =
-                    "> " + content;
-
-                content =
-                    Fit(
-                        content,
-                        CellWidth);
-            }
-            else if (
-                header.StartsWith(
-                    "Header ",
-                    StringComparison.Ordinal))
-            {
-                Console.ForegroundColor =
-                    ConsoleColor.DarkGray;
-            }
-
-            Console.Write(
-                $"│ {content.PadRight(CellWidth)} ");
-
-            Console.ResetColor();
         }
 
-        Console.WriteLine("│");
+        Console.Write(
+            $"│ {content.PadRight(CellWidth)} ");
     }
 
     private static string BuildTopBorder(
@@ -1352,30 +1481,6 @@ internal static class TableRenderer
                     cellBorder,
                     columnCount)) +
             "┘";
-    }
-
-    private static void RenderCell(
-        string value,
-        bool active)
-    {
-        string content =
-            Fit(
-                value,
-                CellWidth);
-
-        if (active)
-        {
-            content =
-                "> " + content;
-
-            content =
-                Fit(
-                    content,
-                    CellWidth);
-        }
-
-        Console.Write(
-            $"│ {content.PadRight(CellWidth)} ");
     }
 
     private static string Fit(
