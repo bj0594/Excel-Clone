@@ -25,7 +25,9 @@ internal static class TableRenderer
             activeRow,
             activeColumn,
             null,
-            false);
+            false,
+            false,
+            0);
     }
 
     public static void Render(
@@ -33,7 +35,9 @@ internal static class TableRenderer
         int activeRow,
         int activeColumn,
         string? editingValue,
-        bool editing)
+        bool editing,
+        bool operationFocus,
+        int activeOperation)
     {
         Console.ResetColor();
 
@@ -63,12 +67,6 @@ internal static class TableRenderer
 
         // ========================================
         // HEADER BOTTOM
-        //
-        // Complete bottom border:
-        //
-        // └─────────────────┴─────────────────┘
-        //
-        // This belongs only to the header.
         // ========================================
 
         Console.ForegroundColor =
@@ -82,15 +80,7 @@ internal static class TableRenderer
 
         // ========================================
         // DATA TOP
-        //
-        // Separate complete top border:
-        //
-        // ┌─────────────────┬─────────────────┐
-        //
-        // It is immediately below the header.
         // ========================================
-
-        Console.ResetColor();
 
         Console.WriteLine(
             BuildTopBorder(
@@ -130,6 +120,26 @@ internal static class TableRenderer
 
         RenderDataBottomBorder(
             table.ColumnCount);
+
+        // ========================================
+        // OPERATION BLOCK
+        // ========================================
+        //
+        // The operation block is only active when
+        // operationFocus is true.
+        //
+        // When false, no operation is selected.
+        // This prevents the operation block from
+        // appearing active at the same time as the
+        // last data row.
+        // ========================================
+
+        OperationRenderer.Render(
+            table,
+            operationFocus
+                ? activeColumn
+                : -1,
+            activeOperation);
 
         Console.ResetColor();
     }

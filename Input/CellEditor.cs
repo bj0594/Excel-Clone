@@ -205,15 +205,18 @@ internal static class CellEditor
             0);
 
         /*
-         * We still use the normal renderer to create
-         * the correct table geometry.
+         * CellEditor always starts editing inside
+         * the main table, never inside the operation
+         * block.
          */
         TableRenderer.Render(
             table,
             displayRow,
             column,
             buffer,
-            true);
+            true,
+            false,
+            0);
 
         /*
          * Move into the active cell.
@@ -310,10 +313,18 @@ internal static class CellEditor
             0,
             0);
 
+        /*
+         * After leaving edit mode we return to the
+         * normal table view. Operation focus is off.
+         */
         TableRenderer.Render(
             table,
             displayRow,
-            column);
+            column,
+            null,
+            false,
+            false,
+            0);
 
         Console.CursorVisible = false;
     }

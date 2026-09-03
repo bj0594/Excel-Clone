@@ -1,0 +1,278 @@
+using System.Collections.Generic;
+using System.Linq;
+using ExcelClone.Models;
+
+namespace ExcelClone.Rendering;
+
+internal static class OperationRenderer
+{
+    private const int CellWidth = 15;
+
+    private const int BorderSegmentWidth =
+        CellWidth + 2;
+
+    private const int OperationRowCount = 4;
+
+    public static void Render(
+        Table table,
+        int activeColumn,
+        int activeOperation)
+    {
+        Console.ResetColor();
+
+        // ========================================
+        // OPERATION TOP
+        //
+        // This is deliberately a complete,
+        // separate top border.
+        //
+        // ┌─────────────────┬─────────────────┐
+        // ========================================
+
+        Console.WriteLine(
+            BuildTopBorder(
+                table.ColumnCount));
+
+        // ========================================
+        // OPERATION ROWS
+        // ========================================
+
+        for (int operationRow = 0;
+             operationRow < OperationRowCount;
+             operationRow++)
+        {
+            RenderOperationRow(
+                table,
+                activeColumn,
+                activeOperation,
+                operationRow);
+        }
+
+        // ========================================
+        // OPERATION BOTTOM
+        // ========================================
+
+        Console.WriteLine(
+            BuildBottomBorder(
+                table.ColumnCount));
+
+        Console.ResetColor();
+    }
+
+    private static void RenderOperationRow(
+        Table table,
+        int activeColumn,
+        int activeOperation,
+        int operationRow)
+    {
+        Console.Write("│");
+
+        for (int column = 0;
+             column < table.ColumnCount;
+             column++)
+        {
+            TypeProfile profile =
+                table.AnalyzeColumn(
+                    column);
+
+            IReadOnlyList<string> operations =
+                GetOperations(
+                    profile);
+
+            string operation =
+                operationRow <
+                operations.Count
+                    ? operations[operationRow]
+                    : string.Empty;
+
+            bool selected =
+                column == activeColumn &&
+                operationRow == activeOperation &&
+                !string.IsNullOrEmpty(
+                    operation);
+
+            RenderOperationCell(
+                operation,
+                selected);
+
+            if (column <
+                table.ColumnCount - 1)
+            {
+                Console.Write("│");
+            }
+        }
+
+        Console.WriteLine("│");
+    }
+
+    private static void RenderOperationCell(
+        string value,
+        bool selected)
+    {
+        string marker =
+            selected
+                ? "> "
+                : "  ";
+
+        int availableWidth =
+            CellWidth -
+            marker.Length;
+
+        string content =
+            Fit(
+                value,
+                availableWidth);
+
+        string text =
+            marker +
+            content;
+
+        text =
+            text.PadRight(
+                CellWidth);
+
+        Console.Write(" ");
+
+        Console.ForegroundColor =
+            selected
+                ? ConsoleColor.White
+                : ConsoleColor.DarkGray;
+
+        Console.Write(
+            text);
+
+        Console.ResetColor();
+
+        Console.Write(" ");
+    }
+
+    private static IReadOnlyList<string>
+        GetOperations(
+            TypeProfile profile)
+    {
+        // ========================================
+        // NUMERIC
+        //
+        // Int and Double share the same
+        // operation set.
+        // ========================================
+
+        if (profile.IsNumeric)
+        {
+            return
+            [
+                "Lowest → Highest",
+                "Highest → Lowest",
+                "Sum"
+            ];
+        }
+
+        // ========================================
+        // OTHER TYPES
+        // ========================================
+
+        switch (profile.DominantType)
+        {
+            case DetectedType.DateTime:
+
+                return
+                [
+                    "Oldest → Newest",
+                    "Newest → Oldest"
+                ];
+
+            case DetectedType.Bool:
+
+                return
+                [
+                    "True first",
+                    "False first"
+                ];
+
+            case DetectedType.String:
+
+                return
+                [
+                    "A → Z",
+                    "Z → A"
+                ];
+
+            case DetectedType.Empty:
+
+                return
+                [
+                    "No type detected"
+                ];
+
+            default:
+
+                return
+                [
+                    "No operations"
+                ];
+        }
+    }
+
+    // ============================================
+    // BORDERS
+    // ============================================
+
+    private static string BuildTopBorder(
+        int columnCount)
+    {
+        string segment =
+            new string(
+                '─',
+                BorderSegmentWidth);
+
+        return
+            "┌" +
+            string.Join(
+                "┬",
+                Enumerable.Repeat(
+                    segment,
+                    columnCount)) +
+            "┐";
+    }
+
+    private static string BuildBottomBorder(
+        int columnCount)
+    {
+        string segment =
+            new string(
+                '─',
+                BorderSegmentWidth);
+
+        return
+            "└" +
+            string.Join(
+                "┴",
+                Enumerable.Repeat(
+                    segment,
+                    columnCount)) +
+            "┘";
+    }
+
+    // ============================================
+    // SHARED
+    // ============================================
+
+    private static string Fit(
+        string value,
+        int width)
+    {
+        if (value.Length <= width)
+        {
+            return value;
+        }
+
+        if (width <= 3)
+        {
+            return value[..width];
+        }
+
+        return
+            value[..(width - 3)] +
+            "...";
+    }
+}
