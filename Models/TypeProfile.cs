@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using ExcelClone.Data;
 
 namespace ExcelClone.Models;
 
@@ -48,7 +50,8 @@ internal sealed class TypeProfile
     }
 
     public bool IsNumeric =>
-        IntCount + DoubleCount > 0;
+        DominantType == DetectedType.Int ||
+        DominantType == DetectedType.Double;
 
     public static TypeProfile FromCells(
         IEnumerable<ICell> cells)
@@ -68,7 +71,13 @@ internal sealed class TypeProfile
                     DetectedType.Empty,
 
                 NonEmptyCount =
-                    0
+                    0,
+
+                StringCount = 0,
+                IntCount = 0,
+                DoubleCount = 0,
+                BoolCount = 0,
+                DateTimeCount = 0
             };
         }
 
@@ -104,6 +113,7 @@ internal sealed class TypeProfile
 
         DetectedType dominantType =
             DetermineDominantType(
+                nonEmptyCells,
                 strings,
                 ints,
                 doubles,
@@ -137,12 +147,24 @@ internal sealed class TypeProfile
 
     private static DetectedType
         DetermineDominantType(
+            List<ICell> cells,
             int strings,
             int ints,
             int doubles,
             int bools,
             int dates)
     {
+        /*
+         * Every actual type is counted separately.
+         *
+         * The type with the highest number of
+         * occurrences wins.
+         *
+         * If two or more types have the same count,
+         * the type that appeared first in the column
+         * wins.
+         */
+
         Dictionary<DetectedType, int>
             counts =
                 new()
@@ -163,29 +185,59 @@ internal sealed class TypeProfile
                         dates
                 };
 
-        return counts
-            .OrderByDescending(
-                pair =>
-                    pair.Value)
-            .ThenBy(
-                pair =>
-                    TypePriority(
-                        pair.Key))
-            .First()
-            .Key;
+        int highestCount =
+            counts.Values.Max();
+
+        foreach (ICell cell in cells)
+        {
+            DetectedType type =
+                GetDetectedType(
+                    cell);
+
+            if (counts[type] ==
+                highestCount)
+            {
+                return type;
+            }
+        }
+
+        return DetectedType.Empty;
     }
 
-    private static int TypePriority(
-        DetectedType type)
+    private static DetectedType
+        GetDetectedType(
+            ICell cell)
     {
-        return type switch
+        if (cell.ValueType ==
+            typeof(string))
         {
-            DetectedType.Int => 0,
-            DetectedType.Double => 1,
-            DetectedType.DateTime => 2,
-            DetectedType.Bool => 3,
-            DetectedType.String => 4,
-            _ => 5
-        };
+            return DetectedType.String;
+        }
+
+        if (cell.ValueType ==
+            typeof(int))
+        {
+            return DetectedType.Int;
+        }
+
+        if (cell.ValueType ==
+            typeof(double))
+        {
+            return DetectedType.Double;
+        }
+
+        if (cell.ValueType ==
+            typeof(bool))
+        {
+            return DetectedType.Bool;
+        }
+
+        if (cell.ValueType ==
+            typeof(DateTime))
+        {
+            return DetectedType.DateTime;
+        }
+
+        return DetectedType.String;
     }
 }

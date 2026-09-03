@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using ExcelClone.Data;
 
 namespace ExcelClone.Models;
 
@@ -9,9 +11,15 @@ internal sealed class Table
 
     private readonly List<string> headers;
 
-    public int DataRowCount { get; }
+    public int DataRowCount
+    {
+        get;
+    }
 
-    public int ColumnCount { get; }
+    public int ColumnCount
+    {
+        get;
+    }
 
     public int TotalDisplayRows =>
         DataRowCount + 1;
@@ -81,7 +89,8 @@ internal sealed class Table
             column);
 
         return rows[dataRow]
-            .GetCell(column);
+            .GetCell(
+                column);
     }
 
     public void SetDataCell(
@@ -102,7 +111,8 @@ internal sealed class Table
     public string GetHeader(
         int column)
     {
-        ValidateColumn(column);
+        ValidateColumn(
+            column);
 
         return headers[column];
     }
@@ -111,7 +121,8 @@ internal sealed class Table
         int column,
         string value)
     {
-        ValidateColumn(column);
+        ValidateColumn(
+            column);
 
         headers[column] =
             value.Trim();
@@ -120,12 +131,14 @@ internal sealed class Table
     public TypeProfile AnalyzeColumn(
         int column)
     {
-        ValidateColumn(column);
+        ValidateColumn(
+            column);
 
         IEnumerable<ICell> cells =
             rows.Select(
                 row =>
-                    row.GetCell(column));
+                    row.GetCell(
+                        column));
 
         return TypeProfile.FromCells(
             cells);
@@ -146,7 +159,8 @@ internal sealed class Table
         int dataRow,
         int column)
     {
-        ValidateColumn(column);
+        ValidateColumn(
+            column);
 
         if (dataRow < 0 ||
             dataRow >= DataRowCount)
