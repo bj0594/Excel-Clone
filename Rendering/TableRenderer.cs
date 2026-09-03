@@ -60,7 +60,9 @@ internal static class TableRenderer
 
         RenderHeaderRow(
             table,
-            activeRow,
+            operationFocus
+                ? -1
+                : activeRow,
             activeColumn,
             editingValue,
             editing);
@@ -101,7 +103,9 @@ internal static class TableRenderer
                 table,
                 dataRow,
                 displayRow,
-                activeRow,
+                operationFocus
+                    ? -1
+                    : activeRow,
                 activeColumn,
                 editingValue,
                 editing);
@@ -123,15 +127,6 @@ internal static class TableRenderer
 
         // ========================================
         // OPERATION BLOCK
-        // ========================================
-        //
-        // The operation block is only active when
-        // operationFocus is true.
-        //
-        // When false, no operation is selected.
-        // This prevents the operation block from
-        // appearing active at the same time as the
-        // last data row.
         // ========================================
 
         OperationRenderer.Render(

@@ -161,8 +161,8 @@ internal static class OperationRenderer
         {
             return
             [
-                "Lowest → Highest",
-                "Highest → Lowest",
+                "Low → High",
+                "High → Low",
                 "Sum"
             ];
         }
@@ -177,8 +177,8 @@ internal static class OperationRenderer
 
                 return
                 [
-                    "Oldest → Newest",
-                    "Newest → Oldest"
+                    "Old → New",
+                    "New → Old"
                 ];
 
             case DetectedType.Bool:
@@ -201,7 +201,7 @@ internal static class OperationRenderer
 
                 return
                 [
-                    "No type detected"
+                    "No type found"
                 ];
 
             default:

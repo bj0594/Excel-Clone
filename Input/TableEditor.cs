@@ -130,16 +130,28 @@ internal static class TableEditor
 
                 case ConsoleKey.LeftArrow:
 
-                    activeColumn =
-                        Math.Max(
-                            activeColumn - 1,
-                            0);
+                    if (focus ==
+                        FocusArea.Operations)
+                    {
+                        MoveOperationColumn(
+                            table,
+                            ref activeColumn,
+                            ref activeOperation,
+                            -1);
+                    }
+                    else
+                    {
+                        activeColumn =
+                            Math.Max(
+                                activeColumn - 1,
+                                0);
 
-                    HandleColumnChange(
-                        table,
-                        ref focus,
-                        ref activeOperation,
-                        activeColumn);
+                        HandleColumnChange(
+                            table,
+                            ref focus,
+                            ref activeOperation,
+                            activeColumn);
+                    }
 
                     RenderTable(
                         table,
@@ -156,16 +168,28 @@ internal static class TableEditor
 
                 case ConsoleKey.RightArrow:
 
-                    activeColumn =
-                        Math.Min(
-                            activeColumn + 1,
-                            table.ColumnCount - 1);
+                    if (focus ==
+                        FocusArea.Operations)
+                    {
+                        MoveOperationColumn(
+                            table,
+                            ref activeColumn,
+                            ref activeOperation,
+                            1);
+                    }
+                    else
+                    {
+                        activeColumn =
+                            Math.Min(
+                                activeColumn + 1,
+                                table.ColumnCount - 1);
 
-                    HandleColumnChange(
-                        table,
-                        ref focus,
-                        ref activeOperation,
-                        activeColumn);
+                        HandleColumnChange(
+                            table,
+                            ref focus,
+                            ref activeOperation,
+                            activeColumn);
+                    }
 
                     RenderTable(
                         table,
@@ -268,6 +292,59 @@ internal static class TableEditor
                     break;
             }
         }
+    }
+
+    // ============================================
+    // OPERATION COLUMN MOVEMENT
+    // ============================================
+
+    private static void MoveOperationColumn(
+        Table table,
+        ref int activeColumn,
+        ref int activeOperation,
+        int direction)
+    {
+        int targetColumn =
+            activeColumn + direction;
+
+        // Stay in the current operation block
+        // if the target is outside the table.
+        if (targetColumn < 0 ||
+            targetColumn >= table.ColumnCount)
+        {
+            return;
+        }
+
+        // Do not leave the operation block just
+        // because the neighbouring column has
+        // no detected type / operations.
+        if (!HasOperations(
+                table,
+                targetColumn))
+        {
+            return;
+        }
+
+        activeColumn =
+            targetColumn;
+
+        int operationCount =
+            GetOperationCount(
+                table,
+                activeColumn);
+
+        if (operationCount <= 0)
+        {
+            return;
+        }
+
+        // Keep the same vertical position when
+        // possible. If the new column has fewer
+        // operations, move to its last valid one.
+        activeOperation =
+            Math.Min(
+                activeOperation,
+                operationCount - 1);
     }
 
     // ============================================
