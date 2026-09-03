@@ -12,7 +12,8 @@ internal static class CellEditor
         Table table,
         int displayRow,
         int column,
-        char? firstCharacter)
+        char? firstCharacter,
+        bool deleteLastCharacter = false)
     {
         bool isHeader =
             displayRow == 0;
@@ -26,23 +27,29 @@ internal static class CellEditor
                         column)
                     .DisplayValue;
 
-        string buffer;
+        string buffer =
+            originalValue;
 
+        /*
+         * Direct typing replaces the existing value.
+         */
         if (firstCharacter.HasValue)
         {
             buffer =
                 firstCharacter.Value.ToString();
         }
-        else
-        {
-            buffer =
-                originalValue;
-        }
 
         /*
-         * Render the complete table only once when
-         * editing starts.
+         * Backspace starts editing immediately
+         * and removes the last existing character.
          */
+        if (deleteLastCharacter &&
+            buffer.Length > 0)
+        {
+            buffer =
+                buffer[..^1];
+        }
+
         RenderInitialEditingState(
             table,
             displayRow,
@@ -70,10 +77,6 @@ internal static class CellEditor
 
                 case ConsoleKey.Escape:
 
-                    /*
-                     * Re-render the original table so that
-                     * any temporary editing text disappears.
-                     */
                     RenderNormalState(
                         table,
                         displayRow,
@@ -205,9 +208,11 @@ internal static class CellEditor
             0);
 
         /*
-         * CellEditor always starts editing inside
-         * the main table, never inside the operation
-         * block.
+         * We are editing a table cell, so operation
+         * focus is explicitly disabled.
+         *
+         * This matches the current 7-parameter
+         * TableRenderer.Render() signature.
          */
         TableRenderer.Render(
             table,
@@ -218,11 +223,6 @@ internal static class CellEditor
             false,
             0);
 
-        /*
-         * Move into the active cell.
-         *
-         * We do not redraw the table after this.
-         */
         PositionCursor(
             displayRow,
             column,
@@ -236,10 +236,6 @@ internal static class CellEditor
         int displayRow,
         int column)
     {
-        /*
-         * Only rewrite the contents of the active
-         * cell. The rest of the table is untouched.
-         */
         int x =
             CalculateInputCursorX(
                 column);
@@ -261,10 +257,6 @@ internal static class CellEditor
             visibleText.PadRight(
                 CellWidth));
 
-        /*
-         * Put the cursor immediately after the
-         * currently visible text.
-         */
         int cursorOffset =
             Math.Min(
                 buffer.Length,
@@ -314,8 +306,8 @@ internal static class CellEditor
             0);
 
         /*
-         * After leaving edit mode we return to the
-         * normal table view. Operation focus is off.
+         * Normal table rendering:
+         * operation focus is off.
          */
         TableRenderer.Render(
             table,
@@ -332,14 +324,6 @@ internal static class CellEditor
     private static int CalculateInputCursorX(
         int column)
     {
-        /*
-         * The table uses:
-         *
-         * │ + space + 15 characters + space
-         *
-         * So the first character of a cell is
-         * two positions after its left border.
-         */
         return
             column *
             (CellWidth + 3) +
@@ -349,21 +333,6 @@ internal static class CellEditor
     private static int CalculateInputCursorY(
         int displayRow)
     {
-        /*
-         * TableRenderer currently renders:
-         *
-         * 0 = header top border
-         * 1 = header content
-         * 2 = header bottom border
-         * 3 = data top border
-         * 4 = first data row
-         *
-         * Data rows therefore start at:
-         *
-         * displayRow * 2 + 2
-         *
-         * Header itself is on row 1.
-         */
         return
             displayRow == 0
                 ? 1

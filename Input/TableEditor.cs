@@ -57,8 +57,10 @@ internal static class TableEditor
                         }
                         else
                         {
-                            // Leave the operation block
-                            // and return to the last data row.
+                            /*
+                             * Leave the operation block
+                             * and return to the last data row.
+                             */
                             focus =
                                 FocusArea.Table;
 
@@ -94,7 +96,11 @@ internal static class TableEditor
                             table,
                             activeColumn))
                         {
-                            // Enter operation block.
+                            /*
+                             * Enter the operation block
+                             * only when this column has
+                             * a detected type.
+                             */
                             focus =
                                 FocusArea.Operations;
 
@@ -131,26 +137,47 @@ internal static class TableEditor
                 case ConsoleKey.LeftArrow:
 
                     if (focus ==
-                        FocusArea.Operations)
+                        FocusArea.Table)
                     {
-                        MoveOperationColumn(
-                            table,
-                            ref activeColumn,
-                            ref activeOperation,
-                            -1);
-                    }
-                    else
-                    {
+                        /*
+                         * Normal horizontal movement
+                         * inside the main table.
+                         */
                         activeColumn =
                             Math.Max(
                                 activeColumn - 1,
                                 0);
 
-                        HandleColumnChange(
+                        HandleOperationSelection(
                             table,
-                            ref focus,
                             ref activeOperation,
                             activeColumn);
+                    }
+                    else
+                    {
+                        /*
+                         * Inside the operation block,
+                         * skip columns that have no
+                         * detected type.
+                         *
+                         * Do not jump back into the table.
+                         */
+                        int targetColumn =
+                            FindPreviousOperationColumn(
+                                table,
+                                activeColumn);
+
+                        if (targetColumn !=
+                            activeColumn)
+                        {
+                            activeColumn =
+                                targetColumn;
+
+                            HandleOperationSelection(
+                                table,
+                                ref activeOperation,
+                                activeColumn);
+                        }
                     }
 
                     RenderTable(
@@ -169,26 +196,47 @@ internal static class TableEditor
                 case ConsoleKey.RightArrow:
 
                     if (focus ==
-                        FocusArea.Operations)
+                        FocusArea.Table)
                     {
-                        MoveOperationColumn(
-                            table,
-                            ref activeColumn,
-                            ref activeOperation,
-                            1);
-                    }
-                    else
-                    {
+                        /*
+                         * Normal horizontal movement
+                         * inside the main table.
+                         */
                         activeColumn =
                             Math.Min(
                                 activeColumn + 1,
                                 table.ColumnCount - 1);
 
-                        HandleColumnChange(
+                        HandleOperationSelection(
                             table,
-                            ref focus,
                             ref activeOperation,
                             activeColumn);
+                    }
+                    else
+                    {
+                        /*
+                         * Inside the operation block,
+                         * skip columns that have no
+                         * detected type.
+                         *
+                         * Do not jump back into the table.
+                         */
+                        int targetColumn =
+                            FindNextOperationColumn(
+                                table,
+                                activeColumn);
+
+                        if (targetColumn !=
+                            activeColumn)
+                        {
+                            activeColumn =
+                                targetColumn;
+
+                            HandleOperationSelection(
+                                table,
+                                ref activeOperation,
+                                activeColumn);
+                        }
                     }
 
                     RenderTable(
@@ -222,9 +270,8 @@ internal static class TableEditor
                             ref activeColumn,
                             result);
 
-                        HandleColumnChange(
+                        HandleOperationSelection(
                             table,
-                            ref focus,
                             ref activeOperation,
                             activeColumn);
 
@@ -237,8 +284,55 @@ internal static class TableEditor
                     }
                     else
                     {
-                        // Operation execution will be
-                        // implemented later.
+                        /*
+                         * Operation execution will be
+                         * implemented later.
+                         */
+                    }
+
+                    break;
+
+                // ========================================
+                // BACKSPACE
+                // ========================================
+
+                case ConsoleKey.Backspace:
+
+                    if (focus ==
+                        FocusArea.Table)
+                    {
+                        /*
+                         * Start editing immediately and
+                         * remove the last character.
+                         *
+                         * This applies to both the
+                         * header row and data cells.
+                         */
+                        EditResult result =
+                            CellEditor.Edit(
+                                table,
+                                activeRow,
+                                activeColumn,
+                                null,
+                                true);
+
+                        MoveAfterEditing(
+                            table,
+                            ref activeRow,
+                            ref activeColumn,
+                            result);
+
+                        HandleOperationSelection(
+                            table,
+                            ref activeOperation,
+                            activeColumn);
+
+                        RenderTable(
+                            table,
+                            activeRow,
+                            activeColumn,
+                            focus,
+                            activeOperation);
                     }
 
                     break;
@@ -262,6 +356,10 @@ internal static class TableEditor
                         !char.IsControl(
                             key.KeyChar))
                     {
+                        /*
+                         * Start editing immediately
+                         * when the user types.
+                         */
                         EditResult result =
                             CellEditor.Edit(
                                 table,
@@ -275,9 +373,8 @@ internal static class TableEditor
                             ref activeColumn,
                             result);
 
-                        HandleColumnChange(
+                        HandleOperationSelection(
                             table,
-                            ref focus,
                             ref activeOperation,
                             activeColumn);
 
@@ -295,82 +392,56 @@ internal static class TableEditor
     }
 
     // ============================================
-    // OPERATION COLUMN MOVEMENT
+    // OPERATION NAVIGATION
     // ============================================
 
-    private static void MoveOperationColumn(
+    private static int FindPreviousOperationColumn(
         Table table,
-        ref int activeColumn,
-        ref int activeOperation,
-        int direction)
+        int currentColumn)
     {
-        int targetColumn =
-            activeColumn + direction;
-
-        // Stay in the current operation block
-        // if the target is outside the table.
-        if (targetColumn < 0 ||
-            targetColumn >= table.ColumnCount)
+        for (int column = currentColumn - 1;
+             column >= 0;
+             column--)
         {
-            return;
-        }
-
-        // Do not leave the operation block just
-        // because the neighbouring column has
-        // no detected type / operations.
-        if (!HasOperations(
+            if (HasOperations(
                 table,
-                targetColumn))
-        {
-            return;
+                column))
+            {
+                return column;
+            }
         }
 
-        activeColumn =
-            targetColumn;
+        return currentColumn;
+    }
 
-        int operationCount =
-            GetOperationCount(
+    private static int FindNextOperationColumn(
+        Table table,
+        int currentColumn)
+    {
+        for (int column = currentColumn + 1;
+             column < table.ColumnCount;
+             column++)
+        {
+            if (HasOperations(
                 table,
-                activeColumn);
-
-        if (operationCount <= 0)
-        {
-            return;
+                column))
+            {
+                return column;
+            }
         }
 
-        // Keep the same vertical position when
-        // possible. If the new column has fewer
-        // operations, move to its last valid one.
-        activeOperation =
-            Math.Min(
-                activeOperation,
-                operationCount - 1);
+        return currentColumn;
     }
 
     // ============================================
-    // COLUMN / OPERATION FOCUS
+    // OPERATION SELECTION
     // ============================================
 
-    private static void HandleColumnChange(
+    private static void HandleOperationSelection(
         Table table,
-        ref FocusArea focus,
         ref int activeOperation,
         int activeColumn)
     {
-        if (!HasOperations(
-                table,
-                activeColumn))
-        {
-            // The new column has no detected type.
-            // Operation focus is therefore impossible.
-            focus =
-                FocusArea.Table;
-
-            activeOperation = 0;
-
-            return;
-        }
-
         int operationCount =
             GetOperationCount(
                 table,
@@ -378,9 +449,6 @@ internal static class TableEditor
 
         if (operationCount <= 0)
         {
-            focus =
-                FocusArea.Table;
-
             activeOperation = 0;
 
             return;
