@@ -6,6 +6,8 @@ namespace ExcelClone.Input;
 
 internal static class CellEditor
 {
+    private const int CellWidth = 15;
+
     public static EditResult Edit(
         Table table,
         int displayRow,
@@ -37,7 +39,11 @@ internal static class CellEditor
                 originalValue;
         }
 
-        RenderEditingState(
+        /*
+         * Render the complete table only once when
+         * editing starts.
+         */
+        RenderInitialEditingState(
             table,
             displayRow,
             column,
@@ -58,9 +64,20 @@ internal static class CellEditor
                         column,
                         buffer);
 
+                    Console.CursorVisible = false;
+
                     return EditResult.Stay;
 
                 case ConsoleKey.Escape:
+
+                    /*
+                     * Re-render the original table so that
+                     * any temporary editing text disappears.
+                     */
+                    RenderNormalState(
+                        table,
+                        displayRow,
+                        column);
 
                     return EditResult.Stay;
 
@@ -72,6 +89,8 @@ internal static class CellEditor
                         column,
                         buffer);
 
+                    Console.CursorVisible = false;
+
                     return EditResult.MoveUp;
 
                 case ConsoleKey.DownArrow:
@@ -81,6 +100,8 @@ internal static class CellEditor
                         displayRow,
                         column,
                         buffer);
+
+                    Console.CursorVisible = false;
 
                     return EditResult.MoveDown;
 
@@ -92,6 +113,8 @@ internal static class CellEditor
                         column,
                         buffer);
 
+                    Console.CursorVisible = false;
+
                     return EditResult.MoveLeft;
 
                 case ConsoleKey.RightArrow:
@@ -102,6 +125,8 @@ internal static class CellEditor
                         column,
                         buffer);
 
+                    Console.CursorVisible = false;
+
                     return EditResult.MoveRight;
 
                 case ConsoleKey.Backspace:
@@ -111,11 +136,10 @@ internal static class CellEditor
                         buffer =
                             buffer[..^1];
 
-                        RenderEditingState(
-                            table,
+                        UpdateEditingCell(
+                            buffer,
                             displayRow,
-                            column,
-                            buffer);
+                            column);
                     }
 
                     break;
@@ -128,11 +152,10 @@ internal static class CellEditor
                         buffer +=
                             key.KeyChar;
 
-                        RenderEditingState(
-                            table,
+                        UpdateEditingCell(
+                            buffer,
                             displayRow,
-                            column,
-                            buffer);
+                            column);
                     }
 
                     break;
@@ -167,12 +190,120 @@ internal static class CellEditor
             cell);
     }
 
-    private static void RenderEditingState(
+    private static void RenderInitialEditingState(
         Table table,
         int displayRow,
         int column,
         string buffer)
     {
+        Console.CursorVisible = false;
+
+        Console.Clear();
+
+        Console.SetCursorPosition(
+            0,
+            0);
+
+        /*
+         * We still use the normal renderer to create
+         * the correct table geometry.
+         */
+        TableRenderer.Render(
+            table,
+            displayRow,
+            column,
+            buffer,
+            true);
+
+        /*
+         * Move into the active cell.
+         *
+         * We do not redraw the table after this.
+         */
+        PositionCursor(
+            displayRow,
+            column,
+            buffer);
+
+        Console.CursorVisible = true;
+    }
+
+    private static void UpdateEditingCell(
+        string buffer,
+        int displayRow,
+        int column)
+    {
+        /*
+         * Only rewrite the contents of the active
+         * cell. The rest of the table is untouched.
+         */
+        int x =
+            CalculateInputCursorX(
+                column);
+
+        int y =
+            CalculateInputCursorY(
+                displayRow);
+
+        Console.SetCursorPosition(
+            x,
+            y);
+
+        string visibleText =
+            Fit(
+                buffer,
+                CellWidth);
+
+        Console.Write(
+            visibleText.PadRight(
+                CellWidth));
+
+        /*
+         * Put the cursor immediately after the
+         * currently visible text.
+         */
+        int cursorOffset =
+            Math.Min(
+                buffer.Length,
+                CellWidth);
+
+        Console.SetCursorPosition(
+            x + cursorOffset,
+            y);
+
+        Console.CursorVisible = true;
+    }
+
+    private static void PositionCursor(
+        int displayRow,
+        int column,
+        string buffer)
+    {
+        int x =
+            CalculateInputCursorX(
+                column);
+
+        int y =
+            CalculateInputCursorY(
+                displayRow);
+
+        int cursorOffset =
+            Math.Min(
+                buffer.Length,
+                CellWidth);
+
+        Console.SetCursorPosition(
+            x + cursorOffset,
+            y);
+    }
+
+    private static void RenderNormalState(
+        Table table,
+        int displayRow,
+        int column)
+    {
+        Console.CursorVisible = false;
+
         Console.Clear();
 
         Console.SetCursorPosition(
@@ -182,42 +313,67 @@ internal static class CellEditor
         TableRenderer.Render(
             table,
             displayRow,
-            column,
-            buffer,
-            true);
+            column);
 
-        Console.SetCursorPosition(
-            CalculateInputCursorX(
-                column),
-            CalculateInputCursorY(
-                displayRow));
-
-        Console.CursorVisible = true;
+        Console.CursorVisible = false;
     }
 
     private static int CalculateInputCursorX(
         int column)
     {
-        const int cellWidth = 15;
-
+        /*
+         * The table uses:
+         *
+         * │ + space + 15 characters + space
+         *
+         * So the first character of a cell is
+         * two positions after its left border.
+         */
         return
             column *
-            (cellWidth + 3) +
+            (CellWidth + 3) +
             3;
     }
 
     private static int CalculateInputCursorY(
         int displayRow)
     {
-        // 0 = header top border
-        // 1 = header content
-        // 2 = header bottom border
-        // 3 = data top border
-        // 4 = first data row
-
+        /*
+         * TableRenderer currently renders:
+         *
+         * 0 = header top border
+         * 1 = header content
+         * 2 = header bottom border
+         * 3 = data top border
+         * 4 = first data row
+         *
+         * Data rows therefore start at:
+         *
+         * displayRow * 2 + 2
+         *
+         * Header itself is on row 1.
+         */
         return
             displayRow == 0
                 ? 1
                 : displayRow * 2 + 2;
+    }
+
+    private static string Fit(
+        string value,
+        int width)
+    {
+        if (value.Length <= width)
+        {
+            return value;
+        }
+
+        if (width <= 3)
+        {
+            return value[..width];
+        }
+
+        return value[..(width - 3)] +
+            "...";
     }
 }
