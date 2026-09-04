@@ -64,7 +64,8 @@ internal static class OperationRenderer
         int operationRow,
         string? operationResult)
     {
-        Console.Write("│");
+        Console.Write(
+            "│");
 
         for (int column = 0;
              column < table.ColumnCount;
@@ -90,19 +91,18 @@ internal static class OperationRenderer
                 !string.IsNullOrEmpty(
                     operation);
 
-            /*
-             * Show the execution result in the
-             * selected Sum cell.
-             */
             string displayValue =
                 operation;
 
+            /*
+             * Only display an operation result
+             * while that operation is selected.
+             */
             if (selected &&
-                operationRow == 2 &&
                 operationResult != null)
             {
                 displayValue =
-                    $"Sum: {operationResult}";
+                    $"{operation}: {operationResult}";
             }
 
             RenderOperationCell(
@@ -112,11 +112,13 @@ internal static class OperationRenderer
             if (column <
                 table.ColumnCount - 1)
             {
-                Console.Write("│");
+                Console.Write(
+                    "│");
             }
         }
 
-        Console.WriteLine("│");
+        Console.WriteLine(
+            "│");
     }
 
     private static void RenderOperationCell(
@@ -145,7 +147,8 @@ internal static class OperationRenderer
             text.PadRight(
                 CellWidth);
 
-        Console.Write(" ");
+        Console.Write(
+            " ");
 
         Console.ForegroundColor =
             selected
@@ -157,7 +160,8 @@ internal static class OperationRenderer
 
         Console.ResetColor();
 
-        Console.Write(" ");
+        Console.Write(
+            " ");
     }
 
     private static IReadOnlyList<string>
