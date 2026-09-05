@@ -19,7 +19,9 @@ The project was created as a practical way to explore generic classes, generic c
 
 ## Planning and Design
 
-The project was planned around separation of responsibilities. `Table` and `Row` handle the spreadsheet structure, `Cell<T>` handles strongly typed cell values, `ICell` provides a common cell contract, and separate namespaces handle input, operations, data handling, and rendering.
+The project was planned around separation of responsibilities. `Table` and `Row` handle the spreadsheet structure, `Cell<T>` handles strongly typed cell values, `ICell` provides a common cell contract, and separate namespaces handle input, data handling, operations, and rendering.
+
+The goal was to keep each part of the application focused on one responsibility instead of placing the entire program in `Program.cs`.
 
 The project is organized as follows:
 
@@ -51,8 +53,6 @@ ExcelClone/
 └── Program.cs
 ```
 
-The goal was to avoid putting all functionality into `Program.cs` and instead keep each part of the application focused on one responsibility.
-
 ## Generics
 
 The main generic class is `Cell<T>`:
@@ -72,7 +72,7 @@ Cell<bool>
 Cell<DateTime>
 ```
 
-The `where T : IComparable<T>` constraint demonstrates a generic constraint and ensures that the types used with `Cell<T>` support comparison.
+The `where T : IComparable<T>` constraint demonstrates a generic constraint and ensures that the type used with `Cell<T>` supports comparison.
 
 The project also contains a separate generic `Container<T>`:
 
@@ -80,31 +80,19 @@ The project also contains a separate generic `Container<T>`:
 internal sealed class Container<T> : IContainer<T>
 ```
 
-`Container<T>` stores values using `List<T>` and supports `Add`, `Get`, `Remove`, and `Clear`.
+`Container<T>` stores values using `List<T>` and provides `Add`, `Get`, `Remove`, and `Clear`.
 
-This demonstrates how one generic class can work with different data types without creating separate container classes.
+This demonstrates how one generic implementation can work with different data types without creating separate container classes.
 
 ## Interfaces
 
-`ICell` defines the common contract for spreadsheet cells. This allows the rest of the application to work with different `Cell<T>` instances through the same abstraction.
+`ICell` defines the common contract for spreadsheet cells.
 
-For example:
-
-```csharp
-ICell
-```
-
-can represent:
-
-```csharp
-Cell<int>
-Cell<string>
-Cell<DateTime>
-```
+This allows the rest of the application to work with different `Cell<T>` instances through one abstraction without needing to know their concrete generic type.
 
 `IContainer<T>` defines the contract implemented by `Container<T>`.
 
-Interfaces separate expected behaviour from implementation and make alternative implementations possible without changing the code that depends on the contract.
+Using interfaces separates expected behaviour from implementation and makes alternative implementations possible without changing the code that depends on the contract.
 
 ## Type Detection
 
@@ -124,9 +112,11 @@ Dates can be entered using:
 dd.MM.yyyy
 ```
 
-The value may be displayed in another format, but it remains stored internally as a `DateTime`.
+The displayed format may differ from the input format, but the value remains stored internally as a `DateTime`.
 
-`TypeProfile` analyses the current values in a column. The type occurring most often becomes the dominant type used by the operation block.
+`TypeProfile` analyses the current non-empty values in a column. The type occurring most often becomes the dominant type used by the operation block.
+
+If two or more types occur equally often, the type that appears first in the column wins the tie.
 
 For example:
 
@@ -136,13 +126,13 @@ Alice
 Bob
 ```
 
-results in `String` because two values are strings.
+results in `String` because strings occur twice.
 
 ## Operations
 
 Available operations depend on the dominant type of the selected column.
 
-Numeric:
+Numeric columns:
 
 ```text
 Low → High
@@ -150,21 +140,21 @@ High → Low
 Sum
 ```
 
-String:
+String columns:
 
 ```text
 A → Z
 Z → A
 ```
 
-Date:
+Date columns:
 
 ```text
 Old → New
 New → Old
 ```
 
-Boolean:
+Boolean columns:
 
 ```text
 True first
@@ -179,11 +169,11 @@ Empty cells are always placed at the bottom.
 
 The spreadsheet provides a practical context for the generic and interface concepts from the assignment.
 
-`Cell<T>` avoids creating separate cell classes for each supported data type, while `ICell` allows those different generic instances to be handled through one common contract.
+`Cell<T>` avoids creating separate cell classes for every supported data type, while `ICell` allows those different generic instances to be handled through one common contract.
 
 `Container<T>` demonstrates how the same generic implementation can work with different types while using `List<T>` internally.
 
-The same ideas could later be applied to API models, database repositories, validation systems, or other collections of strongly typed objects.
+The same principles could later be applied to API models, database repositories, validation systems, or other collections of strongly typed objects.
 
 ## Technologies
 
