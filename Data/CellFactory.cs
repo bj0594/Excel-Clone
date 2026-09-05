@@ -1,33 +1,29 @@
-using System;
 using System.Globalization;
 using ExcelClone.Models;
 
 namespace ExcelClone.Data;
 
+// Converts text entered by the user into the most
+// appropriate strongly typed Cell<T>.
+//
+// The order of the checks matters. More specific
+// types are tested before falling back to string.
 internal static class CellFactory
 {
-    private static readonly string[] DateFormats =
-    [
-        "dd.MM.yyyy",
-        "d.M.yyyy",
-        "dd.MM.yy",
-        "d.M.yy"
-    ];
-
     public static ICell Create(
         string input)
     {
+        // An empty input becomes an empty string cell.
         if (string.IsNullOrEmpty(input))
         {
             return new Cell<string>(
                 string.Empty);
         }
 
-        string trimmedInput =
-            input.Trim();
-
+        // Integers are checked before doubles so that
+        // values such as "42" become Cell<int>.
         if (int.TryParse(
-                trimmedInput,
+                input,
                 NumberStyles.Integer,
                 CultureInfo.InvariantCulture,
                 out int intValue))
@@ -36,8 +32,9 @@ internal static class CellFactory
                 intValue);
         }
 
+        // Decimal-point numbers become Cell<double>.
         if (double.TryParse(
-                trimmedInput,
+                input,
                 NumberStyles.Float,
                 CultureInfo.InvariantCulture,
                 out double doubleValue))
@@ -46,17 +43,21 @@ internal static class CellFactory
                 doubleValue);
         }
 
+        // Boolean values such as "true" and "false"
+        // become Cell<bool>.
         if (bool.TryParse(
-                trimmedInput,
+                input,
                 out bool boolValue))
         {
             return new Cell<bool>(
                 boolValue);
         }
 
+        // First support the spreadsheet's explicit
+        // Norwegian-style date format.
         if (DateTime.TryParseExact(
-                trimmedInput,
-                DateFormats,
+                input,
+                "dd.MM.yyyy",
                 CultureInfo.InvariantCulture,
                 DateTimeStyles.None,
                 out DateTime exactDate))
@@ -65,13 +66,11 @@ internal static class CellFactory
                 exactDate);
         }
 
-        /*
-         * Fallback for other date representations
-         * that .NET can recognize.
-         */
+        // Also allow other unambiguous date formats
+        // supported by the invariant culture.
         if (DateTime.TryParse(
-                trimmedInput,
-                CultureInfo.CurrentCulture,
+                input,
+                CultureInfo.InvariantCulture,
                 DateTimeStyles.None,
                 out DateTime dateValue))
         {
@@ -79,7 +78,9 @@ internal static class CellFactory
                 dateValue);
         }
 
+        // Anything that does not match a supported type
+        // is treated as ordinary text.
         return new Cell<string>(
-            trimmedInput);
+            input);
     }
 }

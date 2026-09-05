@@ -1,10 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using ExcelClone.Data;
 
 namespace ExcelClone.Models;
 
+// Describes the types found in a table column.
+//
+// Each non-empty cell contributes to exactly one type count.
+// The type with the highest count becomes the dominant type.
+//
+// If two or more types have the same number of occurrences,
+// the type that appears first in the column wins the tie.
 internal sealed class TypeProfile
 {
     public DetectedType DominantType
@@ -49,6 +55,8 @@ internal sealed class TypeProfile
         private init;
     }
 
+    // Numeric operations are available when the dominant
+    // type of the column is int or double.
     public bool IsNumeric =>
         DominantType == DetectedType.Int ||
         DominantType == DetectedType.Double;
@@ -56,14 +64,70 @@ internal sealed class TypeProfile
     public static TypeProfile FromCells(
         IEnumerable<ICell> cells)
     {
-        List<ICell> nonEmptyCells =
-            cells
-                .Where(
-                    cell =>
-                        !cell.IsEmpty)
-                .ToList();
+        int nonEmptyCount = 0;
 
-        if (nonEmptyCells.Count == 0)
+        int stringCount = 0;
+        int intCount = 0;
+        int doubleCount = 0;
+        int boolCount = 0;
+        int dateTimeCount = 0;
+
+        // Keep the first occurrence of each type.
+        //
+        // This gives us deterministic tie-breaking without
+        // requiring another pass through the cells later.
+        List<DetectedType> firstSeenTypes =
+            new();
+
+        foreach (ICell cell in cells)
+        {
+            if (cell.IsEmpty)
+            {
+                continue;
+            }
+
+            nonEmptyCount++;
+
+            DetectedType type =
+                GetDetectedType(
+                    cell);
+
+            switch (type)
+            {
+                case DetectedType.String:
+
+                    stringCount++;
+                    break;
+
+                case DetectedType.Int:
+
+                    intCount++;
+                    break;
+
+                case DetectedType.Double:
+
+                    doubleCount++;
+                    break;
+
+                case DetectedType.Bool:
+
+                    boolCount++;
+                    break;
+
+                case DetectedType.DateTime:
+
+                    dateTimeCount++;
+                    break;
+            }
+
+            if (!firstSeenTypes.Contains(type))
+            {
+                firstSeenTypes.Add(
+                    type);
+            }
+        }
+
+        if (nonEmptyCount == 0)
         {
             return new TypeProfile
             {
@@ -81,44 +145,14 @@ internal sealed class TypeProfile
             };
         }
 
-        int strings =
-            nonEmptyCells.Count(
-                cell =>
-                    cell.ValueType ==
-                    typeof(string));
-
-        int ints =
-            nonEmptyCells.Count(
-                cell =>
-                    cell.ValueType ==
-                    typeof(int));
-
-        int doubles =
-            nonEmptyCells.Count(
-                cell =>
-                    cell.ValueType ==
-                    typeof(double));
-
-        int bools =
-            nonEmptyCells.Count(
-                cell =>
-                    cell.ValueType ==
-                    typeof(bool));
-
-        int dates =
-            nonEmptyCells.Count(
-                cell =>
-                    cell.ValueType ==
-                    typeof(DateTime));
-
         DetectedType dominantType =
             DetermineDominantType(
-                nonEmptyCells,
-                strings,
-                ints,
-                doubles,
-                bools,
-                dates);
+                firstSeenTypes,
+                stringCount,
+                intCount,
+                doubleCount,
+                boolCount,
+                dateTimeCount);
 
         return new TypeProfile
         {
@@ -126,84 +160,83 @@ internal sealed class TypeProfile
                 dominantType,
 
             NonEmptyCount =
-                nonEmptyCells.Count,
+                nonEmptyCount,
 
             StringCount =
-                strings,
+                stringCount,
 
             IntCount =
-                ints,
+                intCount,
 
             DoubleCount =
-                doubles,
+                doubleCount,
 
             BoolCount =
-                bools,
+                boolCount,
 
             DateTimeCount =
-                dates
+                dateTimeCount
         };
     }
 
+    // Finds the type with the highest number of occurrences.
+    //
+    // firstSeenTypes is already ordered by first appearance,
+    // so using ">" rather than ">=" preserves the first type
+    // when two types have an equal count.
     private static DetectedType
         DetermineDominantType(
-            List<ICell> cells,
-            int strings,
-            int ints,
-            int doubles,
-            int bools,
-            int dates)
+            IReadOnlyList<DetectedType> firstSeenTypes,
+            int stringCount,
+            int intCount,
+            int doubleCount,
+            int boolCount,
+            int dateTimeCount)
     {
-        /*
-         * Every actual type is counted separately.
-         *
-         * The type with the highest number of
-         * occurrences wins.
-         *
-         * If two or more types have the same count,
-         * the type that appeared first in the column
-         * wins.
-         */
-
-        Dictionary<DetectedType, int>
-            counts =
-                new()
-                {
-                    [DetectedType.String] =
-                        strings,
-
-                    [DetectedType.Int] =
-                        ints,
-
-                    [DetectedType.Double] =
-                        doubles,
-
-                    [DetectedType.Bool] =
-                        bools,
-
-                    [DetectedType.DateTime] =
-                        dates
-                };
-
-        int highestCount =
-            counts.Values.Max();
-
-        foreach (ICell cell in cells)
-        {
-            DetectedType type =
-                GetDetectedType(
-                    cell);
-
-            if (counts[type] ==
-                highestCount)
+        Dictionary<DetectedType, int> counts =
+            new()
             {
-                return type;
+                [DetectedType.String] =
+                    stringCount,
+
+                [DetectedType.Int] =
+                    intCount,
+
+                [DetectedType.Double] =
+                    doubleCount,
+
+                [DetectedType.Bool] =
+                    boolCount,
+
+                [DetectedType.DateTime] =
+                    dateTimeCount
+            };
+
+        DetectedType dominantType =
+            DetectedType.Empty;
+
+        int highestCount = 0;
+
+        foreach (DetectedType type in firstSeenTypes)
+        {
+            int count =
+                counts[type];
+
+            if (count > highestCount)
+            {
+                highestCount =
+                    count;
+
+                dominantType =
+                    type;
             }
         }
 
-        return DetectedType.Empty;
+        return dominantType;
     }
 
+    // Converts the runtime type exposed by ICell into
+    // the application's DetectedType enum.
     private static DetectedType
         GetDetectedType(
             ICell cell)

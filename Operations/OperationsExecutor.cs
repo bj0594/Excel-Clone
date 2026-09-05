@@ -4,6 +4,11 @@ using ExcelClone.Models;
 
 namespace ExcelClone.Operations;
 
+// Executes operations selected in the operation block.
+//
+// The executor contains the behaviour of the available
+// column operations, while rendering and input handling
+// remain in their own classes.
 internal static class OperationExecutor
 {
     public static bool TryExecute(
@@ -30,184 +35,108 @@ internal static class OperationExecutor
             return false;
         }
 
-        /*
-         * Numeric columns:
-         *
-         * 0 = Low → High
-         * 1 = High → Low
-         * 2 = Sum
-         */
+        // Numeric columns have three operations:
+        //
+        // 0 = Lowest → Highest
+        // 1 = Highest → Lowest
+        // 2 = Sum
         if (profile.IsNumeric)
         {
-            switch (operation)
+            if (operation == 2)
             {
-                case 0:
-
-                    SortColumn(
-                        table,
-                        column,
-                        profile.DominantType,
-                        true);
-
-                    return false;
-
-                case 1:
-
-                    SortColumn(
-                        table,
-                        column,
-                        profile.DominantType,
-                        false);
-
-                    return false;
-
-                case 2:
-
-                    return TrySum(
-                        table,
-                        column,
-                        out result);
-
-                default:
-
-                    return false;
+                return TrySum(
+                    table,
+                    column,
+                    out result);
             }
+
+            if (operation == 0 ||
+                operation == 1)
+            {
+                bool ascending =
+                    operation == 0;
+
+                SortColumn(
+                    table,
+                    column,
+                    profile.DominantType,
+                    ascending);
+
+                return false;
+            }
+
+            return false;
         }
 
-        /*
-         * Date columns:
-         *
-         * 0 = Old → New
-         * 1 = New → Old
-         */
-        if (profile.DominantType ==
-            DetectedType.DateTime)
+        // All other supported types have two sorting operations.
+        //
+        // String:
+        // 0 = A → Z
+        // 1 = Z → A
+        //
+        // DateTime:
+        // 0 = Oldest → Newest
+        // 1 = Newest → Oldest
+        //
+        // Bool:
+        // 0 = True first
+        // 1 = False first
+        if (operation != 0 &&
+            operation != 1)
         {
-            switch (operation)
-            {
-                case 0:
-
-                    SortColumn(
-                        table,
-                        column,
-                        DetectedType.DateTime,
-                        true);
-
-                    return false;
-
-                case 1:
-
-                    SortColumn(
-                        table,
-                        column,
-                        DetectedType.DateTime,
-                        false);
-
-                    return false;
-
-                default:
-
-                    return false;
-            }
+            return false;
         }
 
-        /*
-         * Boolean columns:
-         *
-         * 0 = True first
-         * 1 = False first
-         */
+        bool sortAscending =
+            operation == 0;
+
+        // Boolean ordering is intentionally reversed because
+        // bool.CompareTo places false before true, while the
+        // user-facing operation list defines "True first".
         if (profile.DominantType ==
             DetectedType.Bool)
         {
-            switch (operation)
-            {
-                case 0:
-
-                    SortColumn(
-                        table,
-                        column,
-                        DetectedType.Bool,
-                        false);
-
-                    return false;
-
-                case 1:
-
-                    SortColumn(
-                        table,
-                        column,
-                        DetectedType.Bool,
-                        true);
-
-                    return false;
-
-                default:
-
-                    return false;
-            }
+            sortAscending =
+                !sortAscending;
         }
 
-        /*
-         * String columns:
-         *
-         * 0 = A → Z
-         * 1 = Z → A
-         */
-        if (profile.DominantType ==
-            DetectedType.String)
+        switch (profile.DominantType)
         {
-            switch (operation)
-            {
-                case 0:
+            case DetectedType.DateTime:
+            case DetectedType.Bool:
+            case DetectedType.String:
 
-                    SortColumn(
-                        table,
-                        column,
-                        DetectedType.String,
-                        true);
+                SortColumn(
+                    table,
+                    column,
+                    profile.DominantType,
+                    sortAscending);
 
-                    return false;
+                return false;
 
-                case 1:
+            default:
 
-                    SortColumn(
-                        table,
-                        column,
-                        DetectedType.String,
-                        false);
-
-                    return false;
-
-                default:
-
-                    return false;
-            }
+                return false;
         }
-
-        return false;
     }
 
     // ============================================
     // SORTING
     // ============================================
 
+    // Sorts complete rows rather than individual cells.
+    //
+    // This is important because values in different columns
+    // belong to the same row and must remain associated.
     private static void SortColumn(
         Table table,
         int column,
         DetectedType type,
         bool ascending)
     {
-        /*
-         * The table has a maximum of 12 data rows,
-         * so a simple bubble sort is sufficient.
-         *
-         * Entire rows are swapped, not just the
-         * selected cell.
-         *
-         * Empty cells are always moved to the
-         * bottom of the table.
-         */
+        // The table supports a maximum of 12 data rows.
+        // Bubble sort is therefore simple and entirely adequate
+        // for the application's deliberately small data set.
         for (int i = 0;
              i < table.DataRowCount - 1;
              i++)
@@ -228,24 +157,15 @@ internal static class OperationExecutor
                         .GetCell(
                             column);
 
-                /*
-                 * Both are empty:
-                 * nothing to do.
-                 */
+                // Empty cells always belong at the bottom.
                 if (left.IsEmpty &&
                     right.IsEmpty)
                 {
                     continue;
                 }
 
-                /*
-                 * Left is empty and right is not.
-                 *
-                 * Move the empty row DOWN.
-                 *
-                 * This is the important case that
-                 * was reversed in the previous version.
-                 */
+                // Move an empty value down whenever it is
+                // directly above a populated value.
                 if (left.IsEmpty &&
                     !right.IsEmpty)
                 {
@@ -259,12 +179,8 @@ internal static class OperationExecutor
                     continue;
                 }
 
-                /*
-                 * Right is empty and left is not.
-                 *
-                 * Leave it where it is because empty
-                 * values belong at the bottom.
-                 */
+                // The right cell is empty, so the populated
+                // left cell is already in the correct position.
                 if (!left.IsEmpty &&
                     right.IsEmpty)
                 {
@@ -282,17 +198,20 @@ internal static class OperationExecutor
                         ? comparison > 0
                         : comparison < 0;
 
-                if (shouldSwap)
+                if (!shouldSwap)
                 {
-                    SwapRows(
-                        table,
-                        j,
-                        j + 1);
-
-                    swapped = true;
+                    continue;
                 }
+
+                SwapRows(
+                    table,
+                    j,
+                    j + 1);
+
+                swapped = true;
             }
 
+            // Stop early if the current pass made no changes.
             if (!swapped)
             {
                 break;
@@ -313,6 +232,7 @@ internal static class OperationExecutor
             table.Rows[
                 secondRow];
 
+        // Swap every cell so the complete rows remain intact.
         for (int column = 0;
              column < table.ColumnCount;
              column++)
@@ -335,79 +255,109 @@ internal static class OperationExecutor
         }
     }
 
+    // ============================================
+    // COMPARISON
+    // ============================================
+
     private static int CompareCells(
         ICell left,
         ICell right,
         DetectedType type)
     {
-        switch (type)
+        return type switch
         {
-            case DetectedType.Int:
-            case DetectedType.Double:
+            DetectedType.Int or
+            DetectedType.Double =>
+                CompareNumbers(
+                    left,
+                    right),
 
-                if (left.TryGetDecimal(
-                        out decimal leftNumber) &&
-                    right.TryGetDecimal(
-                        out decimal rightNumber))
-                {
-                    return leftNumber.CompareTo(
-                        rightNumber);
-                }
-
-                break;
-
-            case DetectedType.String:
-
-                return string.Compare(
+            DetectedType.String =>
+                string.Compare(
                     left.DisplayValue,
                     right.DisplayValue,
-                    StringComparison.OrdinalIgnoreCase);
+                    StringComparison.OrdinalIgnoreCase),
 
-            case DetectedType.Bool:
+            DetectedType.Bool =>
+                CompareBooleans(
+                    left,
+                    right),
 
-                if (left.RawValue is bool leftBool &&
-                    right.RawValue is bool rightBool)
-                {
-                    return leftBool.CompareTo(
-                        rightBool);
-                }
+            DetectedType.DateTime =>
+                CompareDates(
+                    left,
+                    right),
 
-                break;
+            _ =>
+                string.Compare(
+                    left.DisplayValue,
+                    right.DisplayValue,
+                    StringComparison.OrdinalIgnoreCase)
+        };
+    }
 
-            case DetectedType.DateTime:
-
-                if (left.RawValue is DateTime leftDate &&
-                    right.RawValue is DateTime rightDate)
-                {
-                    return leftDate.CompareTo(
-                        rightDate);
-                }
-
-                break;
+    private static int CompareNumbers(
+        ICell left,
+        ICell right)
+    {
+        if (left.TryGetDecimal(
+                out decimal leftNumber) &&
+            right.TryGetDecimal(
+                out decimal rightNumber))
+        {
+            return leftNumber.CompareTo(
+                rightNumber);
         }
 
-        /*
-         * Fallback for unexpected mixed values.
-         */
-        return string.Compare(
-            left.DisplayValue,
-            right.DisplayValue,
-            StringComparison.OrdinalIgnoreCase);
+        // Both cells are expected to contain the dominant
+        // column type. If conversion unexpectedly fails,
+        // leave their relative order unchanged.
+        return 0;
+    }
+
+    private static int CompareBooleans(
+        ICell left,
+        ICell right)
+    {
+        if (left.RawValue is bool leftValue &&
+            right.RawValue is bool rightValue)
+        {
+            return leftValue.CompareTo(
+                rightValue);
+        }
+
+        return 0;
+    }
+
+    private static int CompareDates(
+        ICell left,
+        ICell right)
+    {
+        if (left.RawValue is DateTime leftValue &&
+            right.RawValue is DateTime rightValue)
+        {
+            return leftValue.CompareTo(
+                rightValue);
+        }
+
+        return 0;
     }
 
     // ============================================
     // SUM
     // ============================================
 
+    // Calculates the sum of all numeric cells in a column.
+    //
+    // TryGetDecimal allows both int and double cells to use
+    // the same calculation without duplicating the summing
+    // logic for each numeric type.
     private static bool TrySum(
         Table table,
         int column,
         out string result)
     {
-        result = string.Empty;
-
         decimal sum = 0;
-
         bool foundNumber = false;
 
         for (int dataRow = 0;
@@ -426,12 +376,12 @@ internal static class OperationExecutor
             }
 
             sum += value;
-
             foundNumber = true;
         }
 
         if (!foundNumber)
         {
+            result = string.Empty;
             return false;
         }
 
