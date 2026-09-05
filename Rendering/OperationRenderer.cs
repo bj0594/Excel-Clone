@@ -22,6 +22,24 @@ internal static class OperationRenderer
     {
         Console.ResetColor();
 
+        // Analyze each column once before rendering.
+        //
+        // The operation block contains several rows, but all
+        // rows use the same type profile for their column.
+        // Reusing the profiles avoids analyzing the same column
+        // repeatedly during one render.
+        TypeProfile[] profiles =
+            new TypeProfile[table.ColumnCount];
+
+        for (int column = 0;
+             column < table.ColumnCount;
+             column++)
+        {
+            profiles[column] =
+                table.AnalyzeColumn(
+                    column);
+        }
+
         // ========================================
         // OPERATION TOP
         // ========================================
@@ -40,6 +58,7 @@ internal static class OperationRenderer
         {
             RenderOperationRow(
                 table,
+                profiles,
                 activeColumn,
                 activeOperation,
                 operationRow,
@@ -59,6 +78,7 @@ internal static class OperationRenderer
 
     private static void RenderOperationRow(
         Table table,
+        IReadOnlyList<TypeProfile> profiles,
         int activeColumn,
         int activeOperation,
         int operationRow,
@@ -72,16 +92,14 @@ internal static class OperationRenderer
              column++)
         {
             TypeProfile profile =
-                table.AnalyzeColumn(
-                    column);
+                profiles[column];
 
             IReadOnlyList<string> operations =
                 GetOperations(
                     profile);
 
             string operation =
-                operationRow <
-                operations.Count
+                operationRow < operations.Count
                     ? operations[operationRow]
                     : string.Empty;
 
@@ -94,10 +112,8 @@ internal static class OperationRenderer
             string displayValue =
                 operation;
 
-            /*
-             * Only display an operation result
-             * while that operation is selected.
-             */
+            // Only display an operation result while
+            // that operation is currently selected.
             if (selected &&
                 operationResult != null)
             {

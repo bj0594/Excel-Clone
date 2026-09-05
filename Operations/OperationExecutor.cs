@@ -4,11 +4,10 @@ using ExcelClone.Models;
 
 namespace ExcelClone.Operations;
 
-// Executes operations selected in the operation block.
+// Executes the operations available for a table column.
 //
-// The executor contains the behaviour of the available
-// column operations, while rendering and input handling
-// remain in their own classes.
+// Sorting moves complete rows so that values in different
+// columns remain associated with the same record.
 internal static class OperationExecutor
 {
     public static bool TryExecute(
@@ -35,11 +34,6 @@ internal static class OperationExecutor
             return false;
         }
 
-        // Numeric columns have three operations:
-        //
-        // 0 = Lowest → Highest
-        // 1 = Highest → Lowest
-        // 2 = Sum
         if (profile.IsNumeric)
         {
             if (operation == 2)
@@ -53,14 +47,11 @@ internal static class OperationExecutor
             if (operation == 0 ||
                 operation == 1)
             {
-                bool ascending =
-                    operation == 0;
-
                 SortColumn(
                     table,
                     column,
                     profile.DominantType,
-                    ascending);
+                    operation == 0);
 
                 return false;
             }
@@ -68,49 +59,35 @@ internal static class OperationExecutor
             return false;
         }
 
-        // All other supported types have two sorting operations.
-        //
-        // String:
-        // 0 = A → Z
-        // 1 = Z → A
-        //
-        // DateTime:
-        // 0 = Oldest → Newest
-        // 1 = Newest → Oldest
-        //
-        // Bool:
-        // 0 = True first
-        // 1 = False first
         if (operation != 0 &&
             operation != 1)
         {
             return false;
         }
 
-        bool sortAscending =
+        bool ascending =
             operation == 0;
 
-        // Boolean ordering is intentionally reversed because
-        // bool.CompareTo places false before true, while the
-        // user-facing operation list defines "True first".
+        // bool.CompareTo places false before true,
+        // while the UI defines "True first" as the
+        // first boolean operation.
         if (profile.DominantType ==
             DetectedType.Bool)
         {
-            sortAscending =
-                !sortAscending;
+            ascending = !ascending;
         }
 
         switch (profile.DominantType)
         {
-            case DetectedType.DateTime:
-            case DetectedType.Bool:
             case DetectedType.String:
+            case DetectedType.Bool:
+            case DetectedType.DateTime:
 
                 SortColumn(
                     table,
                     column,
                     profile.DominantType,
-                    sortAscending);
+                    ascending);
 
                 return false;
 
@@ -120,23 +97,17 @@ internal static class OperationExecutor
         }
     }
 
-    // ============================================
-    // SORTING
-    // ============================================
-
     // Sorts complete rows rather than individual cells.
-    //
-    // This is important because values in different columns
-    // belong to the same row and must remain associated.
+    // Empty cells are always placed at the bottom.
     private static void SortColumn(
         Table table,
         int column,
         DetectedType type,
         bool ascending)
     {
-        // The table supports a maximum of 12 data rows.
-        // Bubble sort is therefore simple and entirely adequate
-        // for the application's deliberately small data set.
+        // The table is deliberately limited to 12 rows,
+        // so bubble sort is sufficient and keeps the
+        // sorting logic easy to understand.
         for (int i = 0;
              i < table.DataRowCount - 1;
              i++)
@@ -157,15 +128,12 @@ internal static class OperationExecutor
                         .GetCell(
                             column);
 
-                // Empty cells always belong at the bottom.
                 if (left.IsEmpty &&
                     right.IsEmpty)
                 {
                     continue;
                 }
 
-                // Move an empty value down whenever it is
-                // directly above a populated value.
                 if (left.IsEmpty &&
                     !right.IsEmpty)
                 {
@@ -179,8 +147,6 @@ internal static class OperationExecutor
                     continue;
                 }
 
-                // The right cell is empty, so the populated
-                // left cell is already in the correct position.
                 if (!left.IsEmpty &&
                     right.IsEmpty)
                 {
@@ -211,7 +177,6 @@ internal static class OperationExecutor
                 swapped = true;
             }
 
-            // Stop early if the current pass made no changes.
             if (!swapped)
             {
                 break;
@@ -232,7 +197,6 @@ internal static class OperationExecutor
             table.Rows[
                 secondRow];
 
-        // Swap every cell so the complete rows remain intact.
         for (int column = 0;
              column < table.ColumnCount;
              column++)
@@ -254,10 +218,6 @@ internal static class OperationExecutor
                 firstCell);
         }
     }
-
-    // ============================================
-    // COMPARISON
-    // ============================================
 
     private static int CompareCells(
         ICell left,
@@ -289,10 +249,7 @@ internal static class OperationExecutor
                     right),
 
             _ =>
-                string.Compare(
-                    left.DisplayValue,
-                    right.DisplayValue,
-                    StringComparison.OrdinalIgnoreCase)
+                0
         };
     }
 
@@ -309,9 +266,6 @@ internal static class OperationExecutor
                 rightNumber);
         }
 
-        // Both cells are expected to contain the dominant
-        // column type. If conversion unexpectedly fails,
-        // leave their relative order unchanged.
         return 0;
     }
 
@@ -343,15 +297,7 @@ internal static class OperationExecutor
         return 0;
     }
 
-    // ============================================
-    // SUM
-    // ============================================
-
     // Calculates the sum of all numeric cells in a column.
-    //
-    // TryGetDecimal allows both int and double cells to use
-    // the same calculation without duplicating the summing
-    // logic for each numeric type.
     private static bool TrySum(
         Table table,
         int column,

@@ -4,6 +4,7 @@ using ExcelClone.Rendering;
 
 namespace ExcelClone.Input;
 
+// Handles keyboard input, navigation, editing and operation selection.
 internal static class TableEditor
 {
     private enum FocusArea
@@ -16,11 +17,9 @@ internal static class TableEditor
     {
         int activeRow = 0;
         int activeColumn = 0;
-
         int activeOperation = 0;
 
-        string? operationResult =
-            null;
+        string? operationResult = null;
 
         FocusArea focus =
             FocusArea.Table;
@@ -56,20 +55,17 @@ internal static class TableEditor
                                 activeRow - 1,
                                 0);
                     }
+                    else if (activeOperation > 0)
+                    {
+                        activeOperation--;
+                    }
                     else
                     {
-                        if (activeOperation > 0)
-                        {
-                            activeOperation--;
-                        }
-                        else
-                        {
-                            focus =
-                                FocusArea.Table;
+                        focus =
+                            FocusArea.Table;
 
-                            activeRow =
-                                table.TotalDisplayRows - 1;
-                        }
+                        activeRow =
+                            table.TotalDisplayRows - 1;
                     }
 
                     RenderTable(
@@ -245,7 +241,7 @@ internal static class TableEditor
                     {
                         operationResult = null;
 
-                        EditResult result =
+                        EditResult editResult =
                             CellEditor.Edit(
                                 table,
                                 activeRow,
@@ -256,49 +252,29 @@ internal static class TableEditor
                             table,
                             ref activeRow,
                             ref activeColumn,
-                            result);
+                            editResult);
 
                         HandleOperationSelection(
                             table,
                             ref activeOperation,
                             activeColumn);
-
-                        RenderTable(
-                            table,
-                            activeRow,
-                            activeColumn,
-                            focus,
-                            activeOperation,
-                            operationResult);
                     }
                     else
                     {
-                        /*
-                         * Execute the currently selected
-                         * operation.
-                         */
-                        if (OperationExecutor.TryExecute(
+                        operationResult =
+                            ExecuteOperation(
                                 table,
                                 activeColumn,
-                                activeOperation,
-                                out string result))
-                        {
-                            operationResult =
-                                result;
-                        }
-                        else
-                        {
-                            operationResult = null;
-                        }
-
-                        RenderTable(
-                            table,
-                            activeRow,
-                            activeColumn,
-                            focus,
-                            activeOperation,
-                            operationResult);
+                                activeOperation);
                     }
+
+                    RenderTable(
+                        table,
+                        activeRow,
+                        activeColumn,
+                        focus,
+                        activeOperation,
+                        operationResult);
 
                     break;
 
@@ -313,7 +289,7 @@ internal static class TableEditor
                     if (focus ==
                         FocusArea.Table)
                     {
-                        EditResult result =
+                        EditResult editResult =
                             CellEditor.Edit(
                                 table,
                                 activeRow,
@@ -325,21 +301,21 @@ internal static class TableEditor
                             table,
                             ref activeRow,
                             ref activeColumn,
-                            result);
+                            editResult);
 
                         HandleOperationSelection(
                             table,
                             ref activeOperation,
                             activeColumn);
-
-                        RenderTable(
-                            table,
-                            activeRow,
-                            activeColumn,
-                            focus,
-                            activeOperation,
-                            operationResult);
                     }
+
+                    RenderTable(
+                        table,
+                        activeRow,
+                        activeColumn,
+                        focus,
+                        activeOperation,
+                        operationResult);
 
                     break;
 
@@ -364,7 +340,7 @@ internal static class TableEditor
                     {
                         operationResult = null;
 
-                        EditResult result =
+                        EditResult editResult =
                             CellEditor.Edit(
                                 table,
                                 activeRow,
@@ -375,21 +351,21 @@ internal static class TableEditor
                             table,
                             ref activeRow,
                             ref activeColumn,
-                            result);
+                            editResult);
 
                         HandleOperationSelection(
                             table,
                             ref activeOperation,
                             activeColumn);
-
-                        RenderTable(
-                            table,
-                            activeRow,
-                            activeColumn,
-                            focus,
-                            activeOperation,
-                            operationResult);
                     }
+
+                    RenderTable(
+                        table,
+                        activeRow,
+                        activeColumn,
+                        focus,
+                        activeOperation,
+                        operationResult);
 
                     break;
             }
@@ -397,8 +373,25 @@ internal static class TableEditor
     }
 
     // ============================================
-    // OPERATION NAVIGATION
+    // OPERATIONS
     // ============================================
+
+    private static string? ExecuteOperation(
+        Table table,
+        int column,
+        int operation)
+    {
+        if (OperationExecutor.TryExecute(
+                table,
+                column,
+                operation,
+                out string result))
+        {
+            return result;
+        }
+
+        return null;
+    }
 
     private static int FindPreviousOperationColumn(
         Table table,
@@ -438,10 +431,6 @@ internal static class TableEditor
         return currentColumn;
     }
 
-    // ============================================
-    // OPERATION SELECTION
-    // ============================================
-
     private static void HandleOperationSelection(
         Table table,
         ref int activeOperation,
@@ -455,7 +444,6 @@ internal static class TableEditor
         if (operationCount <= 0)
         {
             activeOperation = 0;
-
             return;
         }
 
@@ -473,14 +461,9 @@ internal static class TableEditor
             table.AnalyzeColumn(
                 column);
 
-        return
-            profile.DominantType !=
+        return profile.DominantType !=
             DetectedType.Empty;
     }
-
-    // ============================================
-    // OPERATION COUNT
-    // ============================================
 
     private static int GetOperationCount(
         Table table,
@@ -504,11 +487,8 @@ internal static class TableEditor
         return profile.DominantType switch
         {
             DetectedType.DateTime => 2,
-
             DetectedType.Bool => 2,
-
             DetectedType.String => 2,
-
             _ => 0
         };
     }

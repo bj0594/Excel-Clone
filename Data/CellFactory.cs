@@ -3,25 +3,22 @@ using ExcelClone.Models;
 
 namespace ExcelClone.Data;
 
-// Converts text entered by the user into the most
-// appropriate strongly typed Cell<T>.
-//
-// The order of the checks matters. More specific
-// types are tested before falling back to string.
+// Converts user input into a strongly typed Cell<T>.
+// The first successful conversion determines the cell type.
 internal static class CellFactory
 {
     public static ICell Create(
         string input)
     {
-        // An empty input becomes an empty string cell.
+        // Empty input represents an empty cell.
         if (string.IsNullOrEmpty(input))
         {
             return new Cell<string>(
                 string.Empty);
         }
 
-        // Integers are checked before doubles so that
-        // values such as "42" become Cell<int>.
+        // Integers are checked first so values such as "42"
+        // are stored as Cell<int> rather than Cell<double>.
         if (int.TryParse(
                 input,
                 NumberStyles.Integer,
@@ -32,29 +29,8 @@ internal static class CellFactory
                 intValue);
         }
 
-        // Decimal-point numbers become Cell<double>.
-        if (double.TryParse(
-                input,
-                NumberStyles.Float,
-                CultureInfo.InvariantCulture,
-                out double doubleValue))
-        {
-            return new Cell<double>(
-                doubleValue);
-        }
-
-        // Boolean values such as "true" and "false"
-        // become Cell<bool>.
-        if (bool.TryParse(
-                input,
-                out bool boolValue))
-        {
-            return new Cell<bool>(
-                boolValue);
-        }
-
-        // First support the spreadsheet's explicit
-        // Norwegian-style date format.
+        // Explicitly support the spreadsheet's Norwegian-style
+        // date format: day.month.year.
         if (DateTime.TryParseExact(
                 input,
                 "dd.MM.yyyy",
@@ -66,8 +42,29 @@ internal static class CellFactory
                 exactDate);
         }
 
-        // Also allow other unambiguous date formats
-        // supported by the invariant culture.
+        // Decimal-point numbers are stored as Cell<double>.
+        if (double.TryParse(
+                input,
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out double doubleValue))
+        {
+            return new Cell<double>(
+                doubleValue);
+        }
+
+        // Boolean values such as "true" and "false" become
+        // Cell<bool>.
+        if (bool.TryParse(
+                input,
+                out bool boolValue))
+        {
+            return new Cell<bool>(
+                boolValue);
+        }
+
+        // Also accept other date representations supported
+        // by the invariant culture.
         if (DateTime.TryParse(
                 input,
                 CultureInfo.InvariantCulture,
@@ -78,8 +75,8 @@ internal static class CellFactory
                 dateValue);
         }
 
-        // Anything that does not match a supported type
-        // is treated as ordinary text.
+        // Values that match none of the supported types
+        // remain ordinary text.
         return new Cell<string>(
             input);
     }

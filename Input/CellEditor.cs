@@ -7,6 +7,9 @@ namespace ExcelClone.Input;
 internal static class CellEditor
 {
     private const int CellWidth = 15;
+    private const int MarkerWidth = 2;
+    private const int InputWidth =
+        CellWidth - MarkerWidth;
 
     public static EditResult Edit(
         Table table,
@@ -30,19 +33,15 @@ internal static class CellEditor
         string buffer =
             originalValue;
 
-        /*
-         * Direct typing replaces the existing value.
-         */
+        // Direct typing replaces the existing value.
         if (firstCharacter.HasValue)
         {
             buffer =
                 firstCharacter.Value.ToString();
         }
 
-        /*
-         * Backspace starts editing immediately
-         * and removes the last existing character.
-         */
+        // Backspace starts editing immediately
+        // and removes the last existing character.
         if (deleteLastCharacter &&
             buffer.Length > 0)
         {
@@ -207,13 +206,6 @@ internal static class CellEditor
             0,
             0);
 
-        /*
-         * We are editing a table cell, so operation
-         * focus is explicitly disabled.
-         *
-         * This matches the current 7-parameter
-         * TableRenderer.Render() signature.
-         */
         TableRenderer.Render(
             table,
             displayRow,
@@ -221,7 +213,8 @@ internal static class CellEditor
             buffer,
             true,
             false,
-            0);
+            0,
+            null);
 
         PositionCursor(
             displayRow,
@@ -251,16 +244,16 @@ internal static class CellEditor
         string visibleText =
             Fit(
                 buffer,
-                CellWidth);
+                InputWidth);
 
         Console.Write(
             visibleText.PadRight(
-                CellWidth));
+                InputWidth));
 
         int cursorOffset =
             Math.Min(
                 buffer.Length,
-                CellWidth);
+                InputWidth);
 
         Console.SetCursorPosition(
             x + cursorOffset,
@@ -285,7 +278,7 @@ internal static class CellEditor
         int cursorOffset =
             Math.Min(
                 buffer.Length,
-                CellWidth);
+                InputWidth);
 
         Console.SetCursorPosition(
             x + cursorOffset,
@@ -305,10 +298,6 @@ internal static class CellEditor
             0,
             0);
 
-        /*
-         * Normal table rendering:
-         * operation focus is off.
-         */
         TableRenderer.Render(
             table,
             displayRow,
@@ -316,7 +305,8 @@ internal static class CellEditor
             null,
             false,
             false,
-            0);
+            0,
+            null);
 
         Console.CursorVisible = false;
     }
@@ -324,15 +314,23 @@ internal static class CellEditor
     private static int CalculateInputCursorX(
         int column)
     {
+        // Each cell occupies:
+        // 1 border + 1 padding + 15 content + 1 padding.
+        //
+        // The active-cell marker "> " occupies the first
+        // two characters of the content area, so actual
+        // user input begins two characters later.
         return
             column *
             (CellWidth + 3) +
-            3;
+            4;
     }
 
     private static int CalculateInputCursorY(
         int displayRow)
     {
+        // Header is rendered on line 1.
+        // Each data row is separated by a border line.
         return
             displayRow == 0
                 ? 1
@@ -353,7 +351,8 @@ internal static class CellEditor
             return value[..width];
         }
 
-        return value[..(width - 3)] +
+        return
+            value[..(width - 3)] +
             "...";
     }
 }

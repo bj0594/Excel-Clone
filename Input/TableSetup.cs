@@ -1,6 +1,6 @@
-namespace ExcelClone.Input;
-
 using ExcelClone.Models;
+
+namespace ExcelClone.Input;
 
 internal static class TableSetup
 {
@@ -10,58 +10,26 @@ internal static class TableSetup
     private const int MinColumns = 1;
     private const int MaxColumns = 8;
 
+    private enum Selection
+    {
+        Columns,
+        Rows
+    }
+
     public static TableSize Create()
     {
         int rows = 4;
-
         int columns = 3;
 
-        // 0 = Columns
-        // 1 = Rows
-        int selected = 0;
+        Selection selected =
+            Selection.Columns;
 
         while (true)
         {
-            Console.Clear();
-
-            Console.WriteLine(
-                "============================================");
-
-            Console.WriteLine(
-                "                 CREATE TABLE");
-
-            Console.WriteLine(
-                "============================================");
-
-            Console.WriteLine();
-
-            Console.WriteLine(
-                "↑ / ↓  Select Columns or Rows");
-
-            Console.WriteLine(
-                "← / →  Change selected value");
-
-            Console.WriteLine(
-                "Enter   Create table");
-
-            Console.WriteLine(
-                "Esc     Quit");
-
-            Console.WriteLine();
-
-            DrawSelector(
-                "Columns",
-                columns,
-                MinColumns,
-                MaxColumns,
-                selected == 0);
-
-            DrawSelector(
-                "Rows",
+            Render(
                 rows,
-                MinRows,
-                MaxRows,
-                selected == 1);
+                columns,
+                selected);
 
             ConsoleKey key =
                 Console.ReadKey(true).Key;
@@ -70,51 +38,35 @@ internal static class TableSetup
             {
                 case ConsoleKey.UpArrow:
 
-                    selected = 0;
+                    selected =
+                        Selection.Columns;
 
                     break;
 
                 case ConsoleKey.DownArrow:
 
-                    selected = 1;
+                    selected =
+                        Selection.Rows;
 
                     break;
 
                 case ConsoleKey.LeftArrow:
 
-                    if (selected == 0)
-                    {
-                        columns =
-                            Math.Max(
-                                columns - 1,
-                                MinColumns);
-                    }
-                    else
-                    {
-                        rows =
-                            Math.Max(
-                                rows - 1,
-                                MinRows);
-                    }
+                    ChangeSelectedValue(
+                        ref rows,
+                        ref columns,
+                        selected,
+                        -1);
 
                     break;
 
                 case ConsoleKey.RightArrow:
 
-                    if (selected == 0)
-                    {
-                        columns =
-                            Math.Min(
-                                columns + 1,
-                                MaxColumns);
-                    }
-                    else
-                    {
-                        rows =
-                            Math.Min(
-                                rows + 1,
-                                MaxRows);
-                    }
+                    ChangeSelectedValue(
+                        ref rows,
+                        ref columns,
+                        selected,
+                        1);
 
                     break;
 
@@ -134,6 +86,89 @@ internal static class TableSetup
             }
         }
     }
+
+    // ============================================
+    // RENDER
+    // ============================================
+
+    private static void Render(
+        int rows,
+        int columns,
+        Selection selected)
+    {
+        Console.Clear();
+
+        Console.WriteLine(
+            "============================================");
+
+        Console.WriteLine(
+            "                 CREATE TABLE");
+
+        Console.WriteLine(
+            "============================================");
+
+        Console.WriteLine();
+
+        Console.WriteLine(
+            "↑ / ↓  Select Columns or Rows");
+
+        Console.WriteLine(
+            "← / →  Change selected value");
+
+        Console.WriteLine(
+            "Enter   Create table");
+
+        Console.WriteLine(
+            "Esc     Quit");
+
+        Console.WriteLine();
+
+        DrawSelector(
+            "Columns",
+            columns,
+            MinColumns,
+            MaxColumns,
+            selected == Selection.Columns);
+
+        DrawSelector(
+            "Rows",
+            rows,
+            MinRows,
+            MaxRows,
+            selected == Selection.Rows);
+    }
+
+    // ============================================
+    // VALUE CHANGES
+    // ============================================
+
+    private static void ChangeSelectedValue(
+        ref int rows,
+        ref int columns,
+        Selection selected,
+        int direction)
+    {
+        if (selected == Selection.Columns)
+        {
+            columns =
+                Math.Clamp(
+                    columns + direction,
+                    MinColumns,
+                    MaxColumns);
+
+            return;
+        }
+
+        rows =
+            Math.Clamp(
+                rows + direction,
+                MinRows,
+                MaxRows);
+    }
+
+    // ============================================
+    // SELECTOR
+    // ============================================
 
     private static void DrawSelector(
         string label,

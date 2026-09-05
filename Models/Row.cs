@@ -4,19 +4,11 @@ using ExcelClone.Data;
 
 namespace ExcelClone.Models;
 
-// Represents one row in the spreadsheet.
-//
-// A row stores cells through the ICell interface rather
-// than depending on a specific Cell<T> type. This allows
-// different generic Cell<T> implementations to coexist
-// naturally in the same table.
+// Represents one row and its cells.
 internal sealed class Row
 {
-    // The cells belonging to this row.
-    //
-    // The number of cells is fixed when the row is created,
-    // so a List<ICell> is sufficient and keeps indexed access
-    // simple.
+    // Rows have a fixed number of columns, so indexed access
+    // through a List keeps the implementation simple.
     private readonly List<ICell> cells;
 
     public Row(
@@ -32,11 +24,9 @@ internal sealed class Row
             new List<ICell>(
                 columnCount);
 
-        // Every new cell starts empty.
-        //
-        // CellFactory is used here so that the creation of
-        // cells remains centralized instead of constructing
-        // a concrete Cell<T> directly inside Row.
+        // Empty cells are created through the factory so that
+        // Row does not need to know which Cell<T> implementation
+        // is used internally.
         for (int column = 0;
              column < columnCount;
              column++)
@@ -47,7 +37,6 @@ internal sealed class Row
         }
     }
 
-    // Returns the cell at the specified column.
     public ICell GetCell(
         int column)
     {
@@ -57,10 +46,6 @@ internal sealed class Row
         return cells[column];
     }
 
-    // Replaces the cell at the specified column.
-    //
-    // ICell allows the caller to provide any supported
-    // generic Cell<T> implementation.
     public void SetCell(
         int column,
         ICell cell)
@@ -75,8 +60,6 @@ internal sealed class Row
             cell;
     }
 
-    // Keeps index validation in one place so GetCell and
-    // SetCell cannot accidentally implement different rules.
     private void ValidateColumn(
         int column)
     {

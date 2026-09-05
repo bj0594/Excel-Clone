@@ -12,70 +12,8 @@ internal static class TableRenderer
     private const int BorderSegmentWidth =
         CellWidth + 2;
 
-    private static readonly ConsoleColor HeaderBorderColor =
+    private const ConsoleColor HeaderBorderColor =
         ConsoleColor.Cyan;
-
-    // ============================================
-    // BACKWARD-COMPATIBLE RENDER OVERLOADS
-    // ============================================
-
-    public static void Render(
-        Table table,
-        int activeRow,
-        int activeColumn)
-    {
-        Render(
-            table,
-            activeRow,
-            activeColumn,
-            null,
-            false,
-            false,
-            0,
-            null);
-    }
-
-    public static void Render(
-        Table table,
-        int activeRow,
-        int activeColumn,
-        string? editingValue,
-        bool editing)
-    {
-        Render(
-            table,
-            activeRow,
-            activeColumn,
-            editingValue,
-            editing,
-            false,
-            0,
-            null);
-    }
-
-    public static void Render(
-        Table table,
-        int activeRow,
-        int activeColumn,
-        string? editingValue,
-        bool editing,
-        bool operationFocus,
-        int activeOperation)
-    {
-        Render(
-            table,
-            activeRow,
-            activeColumn,
-            editingValue,
-            editing,
-            operationFocus,
-            activeOperation,
-            null);
-    }
-
-    // ============================================
-    // MAIN RENDER
-    // ============================================
 
     public static void Render(
         Table table,
@@ -90,7 +28,7 @@ internal static class TableRenderer
         Console.ResetColor();
 
         // ========================================
-        // HEADER TOP
+        // HEADER
         // ========================================
 
         Console.ForegroundColor =
@@ -102,10 +40,6 @@ internal static class TableRenderer
 
         Console.ResetColor();
 
-        // ========================================
-        // HEADER CONTENT
-        // ========================================
-
         RenderHeaderRow(
             table,
             operationFocus
@@ -114,10 +48,6 @@ internal static class TableRenderer
             activeColumn,
             editingValue,
             editing);
-
-        // ========================================
-        // HEADER BOTTOM
-        // ========================================
 
         Console.ForegroundColor =
             HeaderBorderColor;
@@ -129,16 +59,12 @@ internal static class TableRenderer
         Console.ResetColor();
 
         // ========================================
-        // DATA TOP
+        // DATA
         // ========================================
 
         Console.WriteLine(
             BuildTopBorder(
                 table.ColumnCount));
-
-        // ========================================
-        // DATA ROWS
-        // ========================================
 
         for (int dataRow = 0;
              dataRow < table.DataRowCount;
@@ -166,15 +92,11 @@ internal static class TableRenderer
             }
         }
 
-        // ========================================
-        // DATA BOTTOM
-        // ========================================
-
         RenderDataBottomBorder(
             table.ColumnCount);
 
         // ========================================
-        // OPERATION BLOCK
+        // OPERATIONS
         // ========================================
 
         OperationRenderer.Render(
@@ -280,37 +202,25 @@ internal static class TableRenderer
                 ? "> "
                 : string.Empty;
 
-        int availableWidth =
-            CellWidth -
-            marker.Length;
-
         string content =
             Fit(
                 value,
-                availableWidth);
+                CellWidth -
+                marker.Length);
 
         string text =
-            marker +
-            content;
-
-        text =
-            text.PadRight(
+            (marker + content)
+            .PadRight(
                 CellWidth);
 
         Console.Write(
             " ");
 
-        if (placeholder &&
-            !active)
-        {
-            Console.ForegroundColor =
-                ConsoleColor.DarkGray;
-        }
-        else
-        {
-            Console.ForegroundColor =
-                ConsoleColor.White;
-        }
+        Console.ForegroundColor =
+            placeholder &&
+            !active
+                ? ConsoleColor.DarkGray
+                : ConsoleColor.White;
 
         Console.Write(
             text);
@@ -386,21 +296,15 @@ internal static class TableRenderer
                 ? "> "
                 : string.Empty;
 
-        int availableWidth =
-            CellWidth -
-            marker.Length;
-
         string content =
             Fit(
                 value,
-                availableWidth);
+                CellWidth -
+                marker.Length);
 
         string text =
-            marker +
-            content;
-
-        text =
-            text.PadRight(
+            (marker + content)
+            .PadRight(
                 CellWidth);
 
         Console.Write(
@@ -410,7 +314,7 @@ internal static class TableRenderer
     }
 
     // ============================================
-    // DATA BORDERS
+    // BORDERS
     // ============================================
 
     private static void RenderDataMiddleBorder(
@@ -432,10 +336,6 @@ internal static class TableRenderer
             BuildBottomBorder(
                 columnCount));
     }
-
-    // ============================================
-    // BORDER BUILDERS
-    // ============================================
 
     private static string BuildTopBorder(
         int columnCount)
@@ -491,10 +391,6 @@ internal static class TableRenderer
             "┘";
     }
 
-    // ============================================
-    // SHARED
-    // ============================================
-
     private static string Fit(
         string value,
         int width)
@@ -509,7 +405,8 @@ internal static class TableRenderer
             return value[..width];
         }
 
-        return value[..(width - 3)] +
+        return
+            value[..(width - 3)] +
             "...";
     }
 }

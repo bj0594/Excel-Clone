@@ -2,59 +2,53 @@ using System;
 
 namespace ExcelClone.Models;
 
-// Common interface for every spreadsheet cell.
+// Common contract for all spreadsheet cells.
 //
-// Cell<T> is generic, but the rest of the application
-// can work with all cell types through this interface.
-// This keeps the table independent from the concrete
-// generic type stored in each cell.
+// Cell<T> is generic, but the rest of the application does
+// not need to know which T a particular cell contains.
+// This allows different Cell<T> types to coexist in a table.
 internal interface ICell
 {
-    // The underlying value without exposing the generic
-    // type parameter to callers using ICell.
+    // Provides access to the underlying value without
+    // exposing the cell's generic type parameter.
     object? RawValue
     {
         get;
     }
 
-    // The runtime type stored by the generic cell.
-    //
-    // TypeProfile uses this to determine whether a column
-    // primarily contains strings, integers, doubles,
-    // booleans or DateTime values.
+    // Identifies the concrete type stored by the cell.
     Type ValueType
     {
         get;
     }
 
-    // Human-readable name of the stored type.
+    // Provides the stored type as a readable name.
     string TypeName
     {
         get;
     }
 
-    // Text representation used when rendering the cell.
+    // Provides the value in the format used by the renderer.
     string DisplayValue
     {
         get;
     }
 
-    // Indicates whether the cell contains no value.
+    // Indicates whether the cell represents an empty value.
     bool IsEmpty
     {
         get;
     }
 
-    // Indicates whether the stored value is numeric.
+    // Indicates whether the cell contains a supported
+    // numeric value.
     bool IsNumeric
     {
         get;
     }
 
-    // Attempts to convert the value to decimal.
-    //
-    // Numeric operations such as Sum can therefore
-    // handle int and double through one common method.
+    // Provides a common way for numeric cells to expose
+    // their value to calculations such as Sum.
     bool TryGetDecimal(
         out decimal value);
 }
