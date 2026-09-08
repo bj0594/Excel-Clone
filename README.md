@@ -2,7 +2,7 @@
 
 A small terminal-based spreadsheet application written in C#.
 
-The project was created as a practical way to explore generic classes, generic collections, interfaces, type detection, and object-oriented design.
+The project was created as a practical way to explore generic classes, generic collections, interfaces, type detection, and object-oriented design. A separate xUnit test project was later added to test the generic `Container<T>` implementation from the assignment.
 
 ## Features
 
@@ -19,9 +19,11 @@ The project was created as a practical way to explore generic classes, generic c
 
 ## Planning and Design
 
-The project was planned around separation of responsibilities. `Table` and `Row` handle the spreadsheet structure, `Cell<T>` handles strongly typed cell values, `ICell` provides a common cell contract, and separate namespaces handle input, data handling, operations, and rendering.
+The project was planned around separation of responsibilities. `Table` and `Row` handle the spreadsheet structure, `Cell<T>` handles strongly typed cell values, `ICell` provides a common cell contract, and separate areas of the project handle input, data handling, operations, and rendering.
 
-The project now also contains a separate xUnit test project, `ExcelClone.Tests`, which tests the generic `Container<T>` class from the assignment.
+The generic `Container<T>` and `IContainer<T>` were created as a separate part of the project to explore generic classes, generic collections, and interfaces in a more isolated example.
+
+The project uses a solution file to contain both the application and its xUnit test project.
 
 The project is organized as follows:
 
@@ -58,7 +60,8 @@ ExcelClone/
 │   └── AssemblyInfo.cs
 ├── ExcelClone.csproj
 ├── ExcelClone.slnx
-└── Program.cs
+├── Program.cs
+└── README.md
 ```
 
 The goal was to keep each part of the application focused on one responsibility instead of placing the entire program in `Program.cs`.
@@ -195,13 +198,13 @@ For example, the same implementation could be used with API models, database ent
 
 ## Testing
 
-The project contains an xUnit test project in `ExcelClone.Tests`.
+The project contains a separate xUnit test project in `ExcelClone.Tests`.
 
 The tests focus on `Container<T>` and its `IContainer<T>` contract. They cover normal functionality, state changes, invalid indexes, duplicate values, empty containers, nullable values, multiple generic types, and interface usage.
 
 The tests use Arrange–Act–Assert and data-driven testing with `[Theory]` and `[InlineData]`.
 
-To run the tests from the solution root:
+To run all tests from the solution root:
 
 ```bash
 dotnet test
