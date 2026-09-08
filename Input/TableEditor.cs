@@ -24,7 +24,7 @@ internal static class TableEditor
         FocusArea focus =
             FocusArea.Table;
 
-        RenderTable(
+        RenderCurrentState(
             table,
             activeRow,
             activeColumn,
@@ -39,200 +39,54 @@ internal static class TableEditor
 
             switch (key.Key)
             {
-                // ========================================
-                // UP
-                // ========================================
-
                 case ConsoleKey.UpArrow:
 
                     operationResult = null;
 
-                    if (focus ==
-                        FocusArea.Table)
-                    {
-                        activeRow =
-                            Math.Max(
-                                activeRow - 1,
-                                0);
-                    }
-                    else if (activeOperation > 0)
-                    {
-                        activeOperation--;
-                    }
-                    else
-                    {
-                        focus =
-                            FocusArea.Table;
-
-                        activeRow =
-                            table.TotalDisplayRows - 1;
-                    }
-
-                    RenderTable(
+                    HandleUp(
                         table,
-                        activeRow,
-                        activeColumn,
-                        focus,
-                        activeOperation,
-                        operationResult);
+                        ref activeRow,
+                        ref activeOperation,
+                        ref focus);
 
                     break;
-
-                // ========================================
-                // DOWN
-                // ========================================
 
                 case ConsoleKey.DownArrow:
 
                     operationResult = null;
 
-                    if (focus ==
-                        FocusArea.Table)
-                    {
-                        if (activeRow <
-                            table.TotalDisplayRows - 1)
-                        {
-                            activeRow++;
-                        }
-                        else if (HasOperations(
-                            table,
-                            activeColumn))
-                        {
-                            focus =
-                                FocusArea.Operations;
-
-                            activeOperation = 0;
-                        }
-                    }
-                    else
-                    {
-                        int operationCount =
-                            GetOperationCount(
-                                table,
-                                activeColumn);
-
-                        if (activeOperation <
-                            operationCount - 1)
-                        {
-                            activeOperation++;
-                        }
-                    }
-
-                    RenderTable(
+                    HandleDown(
                         table,
-                        activeRow,
+                        ref activeRow,
+                        ref activeOperation,
                         activeColumn,
-                        focus,
-                        activeOperation,
-                        operationResult);
+                        ref focus);
 
                     break;
-
-                // ========================================
-                // LEFT
-                // ========================================
 
                 case ConsoleKey.LeftArrow:
 
                     operationResult = null;
 
-                    if (focus ==
-                        FocusArea.Table)
-                    {
-                        activeColumn =
-                            Math.Max(
-                                activeColumn - 1,
-                                0);
-
-                        HandleOperationSelection(
-                            table,
-                            ref activeOperation,
-                            activeColumn);
-                    }
-                    else
-                    {
-                        int targetColumn =
-                            FindPreviousOperationColumn(
-                                table,
-                                activeColumn);
-
-                        if (targetColumn !=
-                            activeColumn)
-                        {
-                            activeColumn =
-                                targetColumn;
-
-                            HandleOperationSelection(
-                                table,
-                                ref activeOperation,
-                                activeColumn);
-                        }
-                    }
-
-                    RenderTable(
+                    HandleLeft(
                         table,
-                        activeRow,
-                        activeColumn,
-                        focus,
-                        activeOperation,
-                        operationResult);
+                        ref activeColumn,
+                        ref activeOperation,
+                        focus);
 
                     break;
-
-                // ========================================
-                // RIGHT
-                // ========================================
 
                 case ConsoleKey.RightArrow:
 
                     operationResult = null;
 
-                    if (focus ==
-                        FocusArea.Table)
-                    {
-                        activeColumn =
-                            Math.Min(
-                                activeColumn + 1,
-                                table.ColumnCount - 1);
-
-                        HandleOperationSelection(
-                            table,
-                            ref activeOperation,
-                            activeColumn);
-                    }
-                    else
-                    {
-                        int targetColumn =
-                            FindNextOperationColumn(
-                                table,
-                                activeColumn);
-
-                        if (targetColumn !=
-                            activeColumn)
-                        {
-                            activeColumn =
-                                targetColumn;
-
-                            HandleOperationSelection(
-                                table,
-                                ref activeOperation,
-                                activeColumn);
-                        }
-                    }
-
-                    RenderTable(
+                    HandleRight(
                         table,
-                        activeRow,
-                        activeColumn,
-                        focus,
-                        activeOperation,
-                        operationResult);
+                        ref activeColumn,
+                        ref activeOperation,
+                        focus);
 
                     break;
-
-                // ========================================
-                // ENTER
-                // ========================================
 
                 case ConsoleKey.Enter:
 
@@ -268,19 +122,7 @@ internal static class TableEditor
                                 activeOperation);
                     }
 
-                    RenderTable(
-                        table,
-                        activeRow,
-                        activeColumn,
-                        focus,
-                        activeOperation,
-                        operationResult);
-
                     break;
-
-                // ========================================
-                // BACKSPACE
-                // ========================================
 
                 case ConsoleKey.Backspace:
 
@@ -309,37 +151,21 @@ internal static class TableEditor
                             activeColumn);
                     }
 
-                    RenderTable(
-                        table,
-                        activeRow,
-                        activeColumn,
-                        focus,
-                        activeOperation,
-                        operationResult);
-
                     break;
-
-                // ========================================
-                // ESCAPE
-                // ========================================
 
                 case ConsoleKey.Escape:
 
                     return;
 
-                // ========================================
-                // DIRECT TYPING
-                // ========================================
-
                 default:
+
+                    operationResult = null;
 
                     if (focus ==
                         FocusArea.Table &&
                         !char.IsControl(
                             key.KeyChar))
                     {
-                        operationResult = null;
-
                         EditResult editResult =
                             CellEditor.Edit(
                                 table,
@@ -359,21 +185,183 @@ internal static class TableEditor
                             activeColumn);
                     }
 
-                    RenderTable(
-                        table,
-                        activeRow,
-                        activeColumn,
-                        focus,
-                        activeOperation,
-                        operationResult);
-
                     break;
             }
+
+            RenderCurrentState(
+                table,
+                activeRow,
+                activeColumn,
+                focus,
+                activeOperation,
+                operationResult);
         }
     }
 
     // ============================================
-    // OPERATIONS
+    // KEY HANDLING
+    // ============================================
+
+    private static void HandleUp(
+        Table table,
+        ref int activeRow,
+        ref int activeOperation,
+        ref FocusArea focus)
+    {
+        if (focus ==
+            FocusArea.Table)
+        {
+            activeRow =
+                Math.Max(
+                    activeRow - 1,
+                    0);
+
+            return;
+        }
+
+        if (activeOperation > 0)
+        {
+            activeOperation--;
+
+            return;
+        }
+
+        focus =
+            FocusArea.Table;
+
+        activeRow =
+            table.TotalDisplayRows - 1;
+    }
+
+    private static void HandleDown(
+        Table table,
+        ref int activeRow,
+        ref int activeOperation,
+        int activeColumn,
+        ref FocusArea focus)
+    {
+        if (focus ==
+            FocusArea.Table)
+        {
+            if (activeRow <
+                table.TotalDisplayRows - 1)
+            {
+                activeRow++;
+
+                return;
+            }
+
+            if (HasOperations(
+                    table,
+                    activeColumn))
+            {
+                focus =
+                    FocusArea.Operations;
+
+                activeOperation = 0;
+            }
+
+            return;
+        }
+
+        int operationCount =
+            GetOperationCount(
+                table,
+                activeColumn);
+
+        if (activeOperation <
+            operationCount - 1)
+        {
+            activeOperation++;
+        }
+    }
+
+    private static void HandleLeft(
+        Table table,
+        ref int activeColumn,
+        ref int activeOperation,
+        FocusArea focus)
+    {
+        if (focus ==
+            FocusArea.Table)
+        {
+            activeColumn =
+                Math.Max(
+                    activeColumn - 1,
+                    0);
+
+            HandleOperationSelection(
+                table,
+                ref activeOperation,
+                activeColumn);
+
+            return;
+        }
+
+        int targetColumn =
+            FindPreviousOperationColumn(
+                table,
+                activeColumn);
+
+        if (targetColumn ==
+            activeColumn)
+        {
+            return;
+        }
+
+        activeColumn =
+            targetColumn;
+
+        HandleOperationSelection(
+            table,
+            ref activeOperation,
+            activeColumn);
+    }
+
+    private static void HandleRight(
+        Table table,
+        ref int activeColumn,
+        ref int activeOperation,
+        FocusArea focus)
+    {
+        if (focus ==
+            FocusArea.Table)
+        {
+            activeColumn =
+                Math.Min(
+                    activeColumn + 1,
+                    table.ColumnCount - 1);
+
+            HandleOperationSelection(
+                table,
+                ref activeOperation,
+                activeColumn);
+
+            return;
+        }
+
+        int targetColumn =
+            FindNextOperationColumn(
+                table,
+                activeColumn);
+
+        if (targetColumn ==
+            activeColumn)
+        {
+            return;
+        }
+
+        activeColumn =
+            targetColumn;
+
+        HandleOperationSelection(
+            table,
+            ref activeOperation,
+            activeColumn);
+    }
+
+    // ============================================
+    // OPERATION EXECUTION
     // ============================================
 
     private static string? ExecuteOperation(
@@ -392,6 +380,10 @@ internal static class TableEditor
 
         return null;
     }
+
+    // ============================================
+    // OPERATION NAVIGATION
+    // ============================================
 
     private static int FindPreviousOperationColumn(
         Table table,
@@ -444,6 +436,7 @@ internal static class TableEditor
         if (operationCount <= 0)
         {
             activeOperation = 0;
+
             return;
         }
 
@@ -461,7 +454,8 @@ internal static class TableEditor
             table.AnalyzeColumn(
                 column);
 
-        return profile.DominantType !=
+        return
+            profile.DominantType !=
             DetectedType.Empty;
     }
 
@@ -547,7 +541,8 @@ internal static class TableEditor
     // RENDER
     // ============================================
 
-    private static void RenderTable(
+    // Renders the current editor state after each key event.
+    private static void RenderCurrentState(
         Table table,
         int activeRow,
         int activeColumn,

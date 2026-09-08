@@ -4,42 +4,44 @@ namespace ExcelClone.Models;
 
 // Generic spreadsheet cell.
 //
-// T determines the type of value stored by the cell.
-// The IComparable<T> constraint allows supported values
-// to be compared generically, which is useful for sorting.
+// T represents the type of value stored in the cell.
+// The constraint ensures that T supports comparison,
+// which is useful when working with ordered values.
 internal sealed class Cell<T> : ICell
     where T : IComparable<T>
 {
-    // The strongly typed value stored by this cell.
+    // The strongly typed value stored by the cell.
     public T Value { get; }
 
-    // Exposes the generic type through the non-generic interface.
+    // Exposes the concrete generic type through ICell.
     public Type ValueType =>
         typeof(T);
 
-    // Provides the type name for display or inspection.
+    // Provides the stored type as a readable name.
     public string TypeName =>
         typeof(T).Name;
 
-    // Allows non-generic code to access the underlying value.
+    // Makes the underlying value available through
+    // the non-generic ICell interface.
     public object? RawValue =>
         Value;
 
-    // Converts the value into the text shown in the terminal.
+    // Converts the typed value into the representation
+    // used by the terminal renderer.
     public string DisplayValue =>
         ValueFormatter.Format(
             Value);
 
-    // Only an empty string represents an empty cell.
+    // An empty string represents an empty spreadsheet cell.
     public bool IsEmpty =>
         Value is string text &&
         string.IsNullOrEmpty(text);
 
-    // Identifies the numeric types supported by the application.
+    // These are the numeric types currently supported
+    // by CellFactory and the spreadsheet operations.
     public bool IsNumeric =>
         Value is int ||
-        Value is double ||
-        Value is decimal;
+        Value is double;
 
     public Cell(
         T value)
@@ -48,8 +50,8 @@ internal sealed class Cell<T> : ICell
             value;
     }
 
-    // Converts supported numeric types to decimal so numeric
-    // operations can use one common representation.
+    // Converts supported numeric values to decimal so
+    // calculations can use one common numeric representation.
     public bool TryGetDecimal(
         out decimal value)
     {
@@ -65,14 +67,6 @@ internal sealed class Cell<T> : ICell
         {
             value =
                 (decimal)doubleValue;
-
-            return true;
-        }
-
-        if (Value is decimal decimalValue)
-        {
-            value =
-                decimalValue;
 
             return true;
         }

@@ -1,14 +1,18 @@
-﻿using ExcelClone.Input;
+﻿using System.Text;
+using ExcelClone.Input;
 using ExcelClone.Models;
 
 namespace ExcelClone;
 
+// Entry point for the Excel Clone application.
+// Program is intentionally kept small and delegates
+// table setup, editing and application logic to other classes.
 internal static class Program
 {
     private static void Main()
     {
         Console.OutputEncoding =
-            System.Text.Encoding.UTF8;
+            Encoding.UTF8;
 
         Console.CursorVisible = false;
 

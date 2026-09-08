@@ -7,9 +7,6 @@ namespace ExcelClone.Input;
 internal static class CellEditor
 {
     private const int CellWidth = 15;
-    private const int MarkerWidth = 2;
-    private const int InputWidth =
-        CellWidth - MarkerWidth;
 
     public static EditResult Edit(
         Table table,
@@ -33,15 +30,16 @@ internal static class CellEditor
         string buffer =
             originalValue;
 
-        // Direct typing replaces the existing value.
+        // Direct typing starts a new value instead of
+        // appending to the existing cell contents.
         if (firstCharacter.HasValue)
         {
             buffer =
                 firstCharacter.Value.ToString();
         }
 
-        // Backspace starts editing immediately
-        // and removes the last existing character.
+        // Backspace can start editing immediately by
+        // removing the final character of the existing value.
         if (deleteLastCharacter &&
             buffer.Length > 0)
         {
@@ -165,14 +163,14 @@ internal static class CellEditor
         }
     }
 
+    // Commits the edited value to either the header or
+    // the corresponding data cell.
     private static void Commit(
         Table table,
         int displayRow,
         int column,
         string buffer)
     {
-        Console.CursorVisible = false;
-
         if (displayRow == 0)
         {
             table.SetHeader(
@@ -192,6 +190,8 @@ internal static class CellEditor
             cell);
     }
 
+    // Re-renders the table before editing and places the
+    // cursor at the end of the current input.
     private static void RenderInitialEditingState(
         Table table,
         int displayRow,
@@ -224,6 +224,8 @@ internal static class CellEditor
         Console.CursorVisible = true;
     }
 
+    // Updates only the edited cell while the user is typing,
+    // avoiding a complete table redraw for every character.
     private static void UpdateEditingCell(
         string buffer,
         int displayRow,
@@ -244,16 +246,16 @@ internal static class CellEditor
         string visibleText =
             Fit(
                 buffer,
-                InputWidth);
+                CellWidth);
 
         Console.Write(
             visibleText.PadRight(
-                InputWidth));
+                CellWidth));
 
         int cursorOffset =
             Math.Min(
                 buffer.Length,
-                InputWidth);
+                CellWidth);
 
         Console.SetCursorPosition(
             x + cursorOffset,
@@ -278,13 +280,14 @@ internal static class CellEditor
         int cursorOffset =
             Math.Min(
                 buffer.Length,
-                InputWidth);
+                CellWidth);
 
         Console.SetCursorPosition(
             x + cursorOffset,
             y);
     }
 
+    // Restores the normal table view when editing is cancelled.
     private static void RenderNormalState(
         Table table,
         int displayRow,
@@ -314,23 +317,15 @@ internal static class CellEditor
     private static int CalculateInputCursorX(
         int column)
     {
-        // Each cell occupies:
-        // 1 border + 1 padding + 15 content + 1 padding.
-        //
-        // The active-cell marker "> " occupies the first
-        // two characters of the content area, so actual
-        // user input begins two characters later.
         return
             column *
             (CellWidth + 3) +
-            4;
+            3;
     }
 
     private static int CalculateInputCursorY(
         int displayRow)
     {
-        // Header is rendered on line 1.
-        // Each data row is separated by a border line.
         return
             displayRow == 0
                 ? 1

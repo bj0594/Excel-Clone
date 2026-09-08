@@ -4,19 +4,18 @@ namespace ExcelClone.Models;
 
 // Common contract for all spreadsheet cells.
 //
-// Cell<T> is generic, but the rest of the application does
-// not need to know which T a particular cell contains.
-// This allows different Cell<T> types to coexist in a table.
+// Cell<T> is generic, but the rest of the application
+// can work with every cell through this interface without
+// needing to know its concrete generic type.
 internal interface ICell
 {
-    // Provides access to the underlying value without
-    // exposing the cell's generic type parameter.
+    // Provides access to the underlying value.
     object? RawValue
     {
         get;
     }
 
-    // Identifies the concrete type stored by the cell.
+    // Identifies the concrete type stored in the cell.
     Type ValueType
     {
         get;
@@ -34,7 +33,7 @@ internal interface ICell
         get;
     }
 
-    // Indicates whether the cell represents an empty value.
+    // Indicates whether the cell contains no value.
     bool IsEmpty
     {
         get;
@@ -47,8 +46,8 @@ internal interface ICell
         get;
     }
 
-    // Provides a common way for numeric cells to expose
-    // their value to calculations such as Sum.
+    // Provides a common numeric representation for
+    // calculations such as Sum.
     bool TryGetDecimal(
         out decimal value);
 }
