@@ -3,11 +3,11 @@ using ExcelClone.Data;
 
 namespace ExcelClone.Models;
 
-// Describes the types found in a table column.
+// Describes the data types currently present in a column.
 //
-// The type occurring most often becomes the dominant type.
-// If multiple types occur equally often, the type that
-// appears first in the column wins the tie.
+// The type with the highest number of occurrences becomes
+// the dominant type. If two or more types have the same
+// count, the type that appears first in the column wins.
 internal sealed class TypeProfile
 {
     public DetectedType DominantType
@@ -53,7 +53,7 @@ internal sealed class TypeProfile
     }
 
     // Numeric operations are available when the dominant
-    // type is int or double.
+    // type of the column is int or double.
     public bool IsNumeric =>
         DominantType == DetectedType.Int ||
         DominantType == DetectedType.Double;
@@ -69,8 +69,7 @@ internal sealed class TypeProfile
         int boolCount = 0;
         int dateTimeCount = 0;
 
-        // Store the order in which types first appear.
-        // This is only needed when two types have the same count.
+        // Keep the order in which types first appear.
         List<DetectedType> firstSeenTypes =
             new();
 
@@ -150,11 +149,12 @@ internal sealed class TypeProfile
 
         int highestCount = 0;
 
-        // Types are examined in first-seen order.
+        // firstSeenTypes is ordered by the first occurrence
+        // of each type in the column. We only replace the
+        // winner when a strictly higher count is found.
         //
-        // Because we only replace the winner when the count
-        // is strictly greater, an equal count keeps the type
-        // that appeared first in the column.
+        // Therefore a tie always keeps the type that appeared
+        // first in the column.
         foreach (DetectedType type in firstSeenTypes)
         {
             int count =

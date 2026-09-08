@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="ExcelClone.csproj" />
+  <Project Path="ExcelClone.Tests/ExcelClone.Tests.csproj" />
+</Solution>
