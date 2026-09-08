@@ -4,10 +4,10 @@ using ExcelClone.Models;
 
 namespace ExcelClone.Operations;
 
-// Executes the operations available for a table column.
+// Executes operations selected in the operation block.
 //
-// Sorting moves complete rows so that values in different
-// columns remain associated with the same record.
+// Sorting moves complete rows so values in different columns
+// remain associated with the same row.
 internal static class OperationExecutor
 {
     public static bool TryExecute(
@@ -34,6 +34,10 @@ internal static class OperationExecutor
             return false;
         }
 
+        // Numeric columns provide three operations:
+        // 0 = Low → High
+        // 1 = High → Low
+        // 2 = Sum
         if (profile.IsNumeric)
         {
             if (operation == 2)
@@ -59,6 +63,7 @@ internal static class OperationExecutor
             return false;
         }
 
+        // Non-numeric supported types provide two operations.
         if (operation != 0 &&
             operation != 1)
         {
@@ -68,9 +73,8 @@ internal static class OperationExecutor
         bool ascending =
             operation == 0;
 
-        // bool.CompareTo places false before true,
-        // while the UI defines "True first" as the
-        // first boolean operation.
+        // Bool has the opposite natural ordering of the
+        // user-facing "True first"/"False first" operations.
         if (profile.DominantType ==
             DetectedType.Bool)
         {
@@ -97,17 +101,20 @@ internal static class OperationExecutor
         }
     }
 
+    // ============================================
+    // SORTING
+    // ============================================
+
     // Sorts complete rows rather than individual cells.
-    // Empty cells are always placed at the bottom.
+    // Empty cells are always moved to the bottom.
     private static void SortColumn(
         Table table,
         int column,
         DetectedType type,
         bool ascending)
     {
-        // The table is deliberately limited to 12 rows,
-        // so bubble sort is sufficient and keeps the
-        // sorting logic easy to understand.
+        // The table contains at most 12 data rows, so bubble
+        // sort keeps the implementation simple and readable.
         for (int i = 0;
              i < table.DataRowCount - 1;
              i++)
@@ -197,6 +204,7 @@ internal static class OperationExecutor
             table.Rows[
                 secondRow];
 
+        // Swap every cell so the two complete rows stay intact.
         for (int column = 0;
              column < table.ColumnCount;
              column++)
@@ -218,6 +226,10 @@ internal static class OperationExecutor
                 firstCell);
         }
     }
+
+    // ============================================
+    // COMPARISON
+    // ============================================
 
     private static int CompareCells(
         ICell left,
@@ -297,7 +309,12 @@ internal static class OperationExecutor
         return 0;
     }
 
-    // Calculates the sum of all numeric cells in a column.
+    // ============================================
+    // SUM
+    // ============================================
+
+    // Uses the common numeric conversion supplied by ICell,
+    // allowing int and double values to share one calculation.
     private static bool TrySum(
         Table table,
         int column,
