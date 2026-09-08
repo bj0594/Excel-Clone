@@ -237,4 +237,21 @@ public class ContainerTests
         Assert.Equal(1, container.Count);
         Assert.Null(container.Get(0));
     }
+
+    [Fact]
+    public void IContainer_CanBeUsedWithIntValues()
+    {
+        // Arrange
+        IContainer<int> container =
+            new Container<int>();
+
+        // Act
+        // 42 is only sample test data used to verify
+        // that the generic interface works with int.
+        container.Add(42);
+
+        // Assert
+        Assert.Equal(1, container.Count);
+        Assert.Equal(42, container.Get(0));
+    }
 }

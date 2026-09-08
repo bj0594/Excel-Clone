@@ -21,7 +21,7 @@ The project was created as a practical way to explore generic classes, generic c
 
 The project was planned around separation of responsibilities. `Table` and `Row` handle the spreadsheet structure, `Cell<T>` handles strongly typed cell values, `ICell` provides a common cell contract, and separate namespaces handle input, data handling, operations, and rendering.
 
-The goal was to keep each part of the application focused on one responsibility instead of placing the entire program in `Program.cs`.
+The project now also contains a separate xUnit test project, `ExcelClone.Tests`, which tests the generic `Container<T>` class from the assignment.
 
 The project is organized as follows:
 
@@ -50,8 +50,18 @@ ExcelClone/
 ├── Rendering/
 │   ├── OperationRenderer.cs
 │   └── TableRenderer.cs
+├── ExcelClone.Tests/
+│   ├── ContainerTests.cs
+│   ├── README.md
+│   └── ExcelClone.Tests.csproj
+├── Properties/
+│   └── AssemblyInfo.cs
+├── ExcelClone.csproj
+├── ExcelClone.slnx
 └── Program.cs
 ```
+
+The goal was to keep each part of the application focused on one responsibility instead of placing the entire program in `Program.cs`.
 
 ## Generics
 
@@ -175,6 +185,30 @@ The spreadsheet provides a practical context for the generic and interface conce
 
 The same principles could later be applied to API models, database repositories, validation systems, or other collections of strongly typed objects.
 
+## Use in a Larger Application
+
+I expect `Container<T>` could be useful in a larger application as a reusable way to store and manage different kinds of objects without creating a separate container for every type.
+
+For example, the same implementation could be used with API models, database entities, game objects, or other domain objects. `IContainer<T>` would allow the rest of the application to depend on the contract rather than the concrete container implementation.
+
+`Cell<T>` could similarly be part of a larger data-processing system where values of different types need to be stored and handled consistently.
+
+## Testing
+
+The project contains an xUnit test project in `ExcelClone.Tests`.
+
+The tests focus on `Container<T>` and its `IContainer<T>` contract. They cover normal functionality, state changes, invalid indexes, duplicate values, empty containers, nullable values, multiple generic types, and interface usage.
+
+The tests use Arrange–Act–Assert and data-driven testing with `[Theory]` and `[InlineData]`.
+
+To run the tests from the solution root:
+
+```bash
+dotnet test
+```
+
+More information about the test design and coverage can be found in `ExcelClone.Tests/README.md`.
+
 ## Technologies
 
 - C#
@@ -183,11 +217,12 @@ The same principles could later be applied to API models, database repositories,
 - Generics
 - Generic collections
 - Interfaces
+- xUnit
 - Object-oriented programming
 
 ## Assignment
 
-This project was created as part of an assignment focused on generic types and generic classes.
+This project was created as part of an assignment focused on generic types and generic classes, followed by a second assignment focused on unit testing with xUnit.
 
 It demonstrates:
 
@@ -196,5 +231,8 @@ It demonstrates:
 - A generic constraint using `where T : IComparable<T>`
 - Interfaces and implementations
 - Reusing the same generic implementation with multiple data types
+- Unit testing with xUnit
+- Arrange–Act–Assert
+- Data-driven tests with `[Theory]` and `[InlineData]`
 
 The spreadsheet functionality provides a practical context for these concepts instead of keeping the generic examples isolated from the rest of the application.
