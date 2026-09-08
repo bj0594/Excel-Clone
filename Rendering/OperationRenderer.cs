@@ -22,12 +22,8 @@ internal static class OperationRenderer
     {
         Console.ResetColor();
 
-        // Analyze each column once before rendering.
-        //
-        // The operation block contains several rows, but all
-        // rows use the same type profile for their column.
-        // Reusing the profiles avoids analyzing the same column
-        // repeatedly during one render.
+        // Analyze each column once per render.
+        // The same profile is reused by all operation rows.
         TypeProfile[] profiles =
             new TypeProfile[table.ColumnCount];
 
@@ -112,8 +108,8 @@ internal static class OperationRenderer
             string displayValue =
                 operation;
 
-            // Only display an operation result while
-            // that operation is currently selected.
+            // Show a calculation result only while
+            // the corresponding operation is selected.
             if (selected &&
                 operationResult != null)
             {
@@ -199,61 +195,39 @@ internal static class OperationRenderer
         }
 
         // ========================================
-        // DATE
+        // OTHER TYPES
         // ========================================
 
-        switch (profile.DominantType)
+        return profile.DominantType switch
         {
-            case DetectedType.DateTime:
+            DetectedType.DateTime =>
+            [
+                "Old → New",
+                "New → Old"
+            ],
 
-                return
-                [
-                    "Old → New",
-                    "New → Old"
-                ];
+            DetectedType.Bool =>
+            [
+                "True first",
+                "False first"
+            ],
 
-            // ====================================
-            // BOOLEAN
-            // ====================================
+            DetectedType.String =>
+            [
+                "A → Z",
+                "Z → A"
+            ],
 
-            case DetectedType.Bool:
+            DetectedType.Empty =>
+            [
+                "No type found"
+            ],
 
-                return
-                [
-                    "True first",
-                    "False first"
-                ];
-
-            // ====================================
-            // STRING
-            // ====================================
-
-            case DetectedType.String:
-
-                return
-                [
-                    "A → Z",
-                    "Z → A"
-                ];
-
-            // ====================================
-            // EMPTY
-            // ====================================
-
-            case DetectedType.Empty:
-
-                return
-                [
-                    "No type found"
-                ];
-
-            default:
-
-                return
-                [
-                    "No operations"
-                ];
-        }
+            _ =>
+            [
+                "No operations"
+            ]
+        };
     }
 
     // ============================================
